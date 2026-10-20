@@ -3,6 +3,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { BandeauAuchan } from '../components/BandeauAuchan'
 import { LogoAuchan } from '../components/LogoAuchan'
 import { QrBadge } from '../components/QrBadge'
+import { telechargerBadge } from '../lib/badgeImage'
 import { evenement } from '../lib/evenement'
 import { nomComplet } from '../lib/format'
 import { isConfigured, supabase } from '../lib/supabase'
@@ -15,6 +16,7 @@ type EtatNavigation = {
   email?: string
   prenom?: string
   nom?: string
+  telephone?: string
 }
 
 export function ConfirmationPage() {
@@ -23,6 +25,7 @@ export function ConfirmationPage() {
   const etat = (location.state ?? {}) as EtatNavigation
   const [badge, setBadge] = useState<BadgePublic | null>(null)
   const [introuvable, setIntrouvable] = useState(false)
+  const [telechargement, setTelechargement] = useState(false)
   const vientDeSinscrire = Boolean(etat.email)
   const codeAffiche = (badge?.code ?? (vientDeSinscrire ? code : '')).toUpperCase()
   const nomAffiche = badge ? nomComplet(badge) : [etat.prenom, etat.nom].filter(Boolean).join(' ')
@@ -43,6 +46,17 @@ export function ConfirmationPage() {
       cancelled = true
     }
   }, [code])
+
+  async function telecharger() {
+    if (!codeAffiche || telechargement) return
+    setTelechargement(true)
+    await telechargerBadge({
+      code: codeAffiche,
+      prenom: badge?.prenom ?? etat.prenom ?? '',
+      nom: badge?.nom ?? etat.nom ?? '',
+    })
+    setTelechargement(false)
+  }
 
   return (
     <BandeauAuchan>
@@ -65,11 +79,24 @@ export function ConfirmationPage() {
           <QrBadge value={codeAffiche} />
           <p className="mt-4 text-2xl font-semibold tracking-[0.18em]">{codeAffiche}</p>
           {nomAffiche && <p className="mt-2 text-lg">{nomAffiche}</p>}
-          <p className="mt-4 text-sm text-muted">
-            {etat.emailEnvoye
-              ? `Le badge a été envoyé${etat.email ? ` à ${etat.email}` : ''}. Pensez à vérifier les courriers indésirables.`
-              : `Conservez ce QR code. L’e-mail n’a pas pu partir${etat.email ? ` vers ${etat.email}` : ''}.${etat.emailMessage ? ` ${etat.emailMessage}` : ''}`}
+          <p className="mt-4 text-sm font-medium text-ink">
+            {vientDeSinscrire
+              ? 'Votre badge a été téléchargé. Présentez ce QR code à l’entrée.'
+              : 'Présentez ce QR code à l’entrée.'}
           </p>
+          {etat.emailEnvoye && (
+            <p className="mt-2 text-sm text-muted">
+              Une copie a aussi été envoyée{etat.email ? ` à ${etat.email}` : ''}.
+            </p>
+          )}
+          <button
+            type="button"
+            disabled={telechargement}
+            onClick={() => void telecharger()}
+            className="mt-5 w-full rounded-full bg-red py-3 text-sm font-semibold text-white hover:bg-red-dark disabled:opacity-60"
+          >
+            {telechargement ? 'Téléchargement…' : 'Télécharger mon badge'}
+          </button>
         </div>
       )}
 

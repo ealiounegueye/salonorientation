@@ -15,6 +15,11 @@ export function nomComplet(personne: { prenom: string; nom: string }) {
   return `${personne.prenom} ${personne.nom}`
 }
 
+export function extraireCode(valeur: string) {
+  const match = valeur.toUpperCase().match(/SLN-[A-Z0-9]{6}/)
+  return match?.[0] ?? null
+}
+
 export const LIBELLE_STATUT: Record<StatutParticipant, string> = {
   inscrit: 'Inscrit',
   present: 'Présent',

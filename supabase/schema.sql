@@ -254,3 +254,8 @@ create policy "participants_update" on public.participants
   for update to authenticated
   using (public.is_admin())
   with check (public.is_admin());
+
+drop policy if exists "participants_delete" on public.participants;
+create policy "participants_delete" on public.participants
+  for delete to authenticated
+  using (public.is_admin());

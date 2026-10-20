@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { Download, Search } from 'lucide-react'
+import { Download, ScanLine, Search, Trash2 } from 'lucide-react'
 import { AppHeader } from '../components/AppHeader'
+import { ScanPresence } from '../components/ScanPresence'
 import { useAuth } from '../context/AuthContext'
-import { exporterCsv, filtreRecherche, formatQuand, LIBELLE_STATUT, nomComplet } from '../lib/format'
+import { exporterCsv, extraireCode, filtreRecherche, formatQuand, LIBELLE_STATUT, nomComplet } from '../lib/format'
 import { supabase } from '../lib/supabase'
 import type { Participant, StatutParticipant } from '../types'
 
@@ -30,6 +31,8 @@ export function AdminPage() {
   const [flash, setFlash] = useState<string | null>(null)
   const [flashOk, setFlashOk] = useState(true)
   const [exportEnCours, setExportEnCours] = useState(false)
+  const [camera, setCamera] = useState(false)
+  const recents = useRef(new Map<string, number>())
 
   const charger = useCallback(async () => {
     const filtreTexte = filtreRecherche(recherche)
@@ -71,11 +74,18 @@ export function AdminPage() {
     if (!error) setOuverts(suivante)
   }
 
-  async function pointer(event: FormEvent) {
-    event.preventDefault()
-    const valeur = code.trim().toUpperCase()
-    setCode('')
-    if (!valeur) return
+  async function marquerPresent(brut: string) {
+    const valeur = extraireCode(brut) ?? brut.trim().toUpperCase()
+    if (!/^SLN-[A-Z0-9]{6}$/.test(valeur)) {
+      setFlashOk(false)
+      setFlash('Code introuvable.')
+      return
+    }
+    const maintenant = Date.now()
+    const precedent = recents.current.get(valeur)
+    if (precedent && maintenant - precedent < 4000) return
+    recents.current.set(valeur, maintenant)
+
     const { data } = await supabase.from('participants').select('*').eq('code', valeur).maybeSingle()
     const participant = data as Participant | null
     if (!participant) {
@@ -89,11 +99,43 @@ export function AdminPage() {
       return
     }
     if (participant.statut !== 'present') {
-      await supabase.from('participants').update({ statut: 'present' }).eq('id', participant.id)
+      const { error } = await supabase.from('participants').update({ statut: 'present' }).eq('id', participant.id)
+      if (error) {
+        setFlashOk(false)
+        setFlash('Le pointage n’a pas abouti.')
+        recents.current.delete(valeur)
+        return
+      }
       void charger()
     }
     setFlashOk(true)
     setFlash(`${nomComplet(participant)} — présent`)
+    navigator.vibrate?.(40)
+  }
+
+  async function pointer(event: FormEvent) {
+    event.preventDefault()
+    const valeur = code.trim()
+    setCode('')
+    if (!valeur) return
+    await marquerPresent(valeur)
+  }
+
+  async function supprimer(participant: Participant) {
+    const confirme = window.confirm(
+      `Supprimer définitivement l’inscription de ${nomComplet(participant)} (${participant.code}) ?`,
+    )
+    if (!confirme) return
+    const { error } = await supabase.from('participants').delete().eq('id', participant.id)
+    if (error) {
+      setFlashOk(false)
+      setFlash('La suppression n’a pas abouti.')
+      return
+    }
+    setFlashOk(true)
+    setFlash(`${nomComplet(participant)} — inscription supprimée.`)
+    if (lignes.length === 1 && page > 0) setPage((n) => Math.max(0, n - 1))
+    else void charger()
   }
 
   async function exporter() {
@@ -119,6 +161,17 @@ export function AdminPage() {
     <div>
       <AppHeader subtitle="Participants" />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
+        <section className="rounded-2xl border border-line bg-white p-4">
+          <button
+            type="button"
+            onClick={() => setCamera((ouvert) => !ouvert)}
+            className="flex w-full items-center justify-center gap-3 rounded-2xl bg-red py-5 text-lg font-semibold text-white hover:bg-red-dark"
+          >
+            <ScanLine className="size-6" />
+            {camera ? 'Arrêter le scan' : 'Scanner un QR code'}
+          </button>
+          <ScanPresence actif={camera} onCode={(valeur) => void marquerPresent(valeur)} />
+        </section>
         <section className="grid gap-3 sm:grid-cols-3">
           <article className="rounded-2xl border border-line bg-white p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Inscriptions</p>
@@ -145,15 +198,27 @@ export function AdminPage() {
 
         <form onSubmit={(event) => void pointer(event)} className="rounded-2xl border border-line bg-white p-4">
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium">Pointage — scanner ou saisir le code</span>
+            <span className="mb-1.5 block text-sm font-medium">Ou saisir le code</span>
             <input
               value={code}
-              onChange={(event) => setCode(event.target.value.toUpperCase())}
+              onChange={(event) => {
+                const valeur = event.target.value.toUpperCase()
+                setCode(valeur)
+                const lu = extraireCode(valeur)
+                if (!lu) return
+                setCode('')
+                void marquerPresent(lu)
+              }}
               placeholder="SLN-XXXXXX"
+              autoComplete="off"
               className="w-full rounded-2xl border border-line bg-paper px-4 py-3 font-semibold tracking-[0.14em] outline-none ring-red/20 focus:ring-4"
             />
           </label>
-          {flash && <p className={`mt-3 text-sm font-medium ${flashOk ? 'text-green' : 'text-red'}`}>{flash}</p>}
+          {flash && (
+            <p className={`mt-3 text-lg font-semibold ${flashOk ? 'text-green' : 'text-red'}`} role="status">
+              {flash}
+            </p>
+          )}
         </form>
 
         <section className="rounded-2xl border border-line bg-white">
@@ -206,6 +271,9 @@ export function AdminPage() {
                   <th className="px-4 py-3 font-semibold">Contact</th>
                   <th className="px-4 py-3 font-semibold">Statut</th>
                   <th className="px-4 py-3 font-semibold">Inscrit le</th>
+                  <th className="px-4 py-3 font-semibold">
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -226,11 +294,21 @@ export function AdminPage() {
                     </td>
                     <td className="px-4 py-3">{LIBELLE_STATUT[ligne.statut]}</td>
                     <td className="px-4 py-3 text-muted">{formatQuand(ligne.created_at)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => void supprimer(ligne)}
+                        aria-label={`Supprimer ${nomComplet(ligne)}`}
+                        className="rounded-full p-2 text-muted hover:bg-red/10 hover:text-red"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {lignes.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-muted">
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted">
                       Aucun participant.
                     </td>
                   </tr>

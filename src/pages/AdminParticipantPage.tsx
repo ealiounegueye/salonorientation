@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AppHeader } from '../components/AppHeader'
 import { QrBadge } from '../components/QrBadge'
 import { renvoyerBadge } from '../lib/api'
@@ -9,10 +9,12 @@ import type { Participant, StatutParticipant } from '../types'
 
 export function AdminParticipantPage() {
   const { id = '' } = useParams()
+  const navigate = useNavigate()
   const [participant, setParticipant] = useState<Participant | null>(null)
   const [introuvable, setIntrouvable] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [envoi, setEnvoi] = useState(false)
+  const [suppression, setSuppression] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -38,6 +40,23 @@ export function AdminParticipantPage() {
     if (!participant) return
     const { data } = await supabase.from('participants').update({ statut }).eq('id', participant.id).select('*').single()
     if (data) setParticipant(data as Participant)
+  }
+
+  async function supprimer() {
+    if (!participant || suppression) return
+    const confirme = window.confirm(
+      `Supprimer définitivement l’inscription de ${nomComplet(participant)} (${participant.code}) ?`,
+    )
+    if (!confirme) return
+    setSuppression(true)
+    setMessage(null)
+    const { error } = await supabase.from('participants').delete().eq('id', participant.id)
+    if (error) {
+      setMessage('La suppression n’a pas abouti.')
+      setSuppression(false)
+      return
+    }
+    navigate('/admin', { replace: true })
   }
 
   async function renvoyer() {
@@ -127,6 +146,14 @@ export function AdminParticipantPage() {
                     Réactiver
                   </button>
                 )}
+                <button
+                  type="button"
+                  disabled={suppression}
+                  onClick={() => void supprimer()}
+                  className="rounded-full border border-red px-4 py-2 text-sm font-medium text-red hover:bg-red/5 disabled:opacity-50"
+                >
+                  {suppression ? 'Suppression…' : 'Supprimer'}
+                </button>
               </div>
             </div>
           </div>

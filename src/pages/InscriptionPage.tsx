@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { BandeauAuchan } from '../components/BandeauAuchan'
 import { LogoAuchan } from '../components/LogoAuchan'
 import { inscrire, type FormulaireInscription } from '../lib/api'
+import { telechargerBadge } from '../lib/badgeImage'
 import { evenement } from '../lib/evenement'
 import { isConfigured, supabase } from '../lib/supabase'
 
@@ -41,10 +42,12 @@ export function InscriptionPage() {
     event.preventDefault()
     setErreur(null)
     setEnvoi(true)
+    const prenom = form.prenom.trim()
+    const nom = form.nom.trim()
     const resultat = await inscrire({
       ...form,
-      prenom: form.prenom.trim(),
-      nom: form.nom.trim(),
+      prenom,
+      nom,
       email: form.email.trim(),
       telephone: form.telephone.trim(),
       organisation: form.organisation.trim(),
@@ -55,14 +58,16 @@ export function InscriptionPage() {
       setErreur(resultat.message)
       return
     }
+    await telechargerBadge({ code: resultat.code, prenom, nom })
     navigate(`/confirmation/${resultat.code}`, {
       state: {
         emailEnvoye: resultat.emailEnvoye,
         emailMessage: resultat.emailMessage,
         dejaInscrit: resultat.dejaInscrit,
         email: form.email.trim(),
-        prenom: form.prenom.trim(),
-        nom: form.nom.trim(),
+        prenom,
+        nom,
+        telephone: form.telephone.trim(),
       },
     })
   }
