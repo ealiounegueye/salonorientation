@@ -1,0 +1,7 @@
+project_id = "prpfinwafcgpypjajzaw"
+
+[functions.inscrire]
+verify_jwt = false
+
+[functions.renvoyer-badge]
+verify_jwt = true

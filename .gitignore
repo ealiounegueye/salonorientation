@@ -1,0 +1,16 @@
+logs
+*.log
+npm-debug.log*
+node_modules
+dist
+dist-ssr
+*.local
+.env
+.env.*
+!.env.example
+.vscode/*
+.idea
+.DS_Store
+.vercel
+.cursor
+supabase/.temp
