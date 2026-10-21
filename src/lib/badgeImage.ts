@@ -32,7 +32,7 @@ export async function telechargerBadge(opts: { code: string; prenom: string; nom
   ctx.font = '600 28px Figtree, sans-serif'
   ctx.fillText('Auchan Retail Sénégal', 400, 88)
   ctx.font = '700 42px Figtree, sans-serif'
-  ctx.fillText('Salon 2026', 400, 148)
+  ctx.fillText('Salon de Métier', 400, 148)
   ctx.drawImage(image, 120, 190, 560, 560)
   ctx.font = '700 52px Figtree, sans-serif'
   ctx.fillText(opts.code, 400, 830)

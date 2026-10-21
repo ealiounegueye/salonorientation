@@ -33,6 +33,8 @@ export function AdminPage() {
   const [exportEnCours, setExportEnCours] = useState(false)
   const [camera, setCamera] = useState(false)
   const recents = useRef(new Map<string, number>())
+  const son = useRef<AudioContext | null>(null)
+  const flashTimer = useRef<number | null>(null)
 
   const charger = useCallback(async () => {
     const filtreTexte = filtreRecherche(recherche)
@@ -68,6 +70,33 @@ export function AdminPage() {
     return () => window.clearTimeout(timer)
   }, [saisie])
 
+  function preparerSon() {
+    son.current ??= new AudioContext()
+    void son.current.resume()
+  }
+
+  function bip(ok: boolean) {
+    const ctx = son.current
+    if (!ctx) return
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.value = ok ? 880 : 220
+    gain.gain.value = 0.06
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start()
+    osc.stop(ctx.currentTime + (ok ? 0.12 : 0.18))
+  }
+
+  function signaler(ok: boolean, texte: string) {
+    setFlashOk(ok)
+    setFlash(texte)
+    if (flashTimer.current) window.clearTimeout(flashTimer.current)
+    flashTimer.current = window.setTimeout(() => setFlash(null), ok ? 1100 : 1800)
+    bip(ok)
+  }
+
   async function basculerCampagne() {
     const suivante = !ouverts
     const { error } = await supabase.from('campagne').update({ ouverte: suivante }).eq('id', 1)
@@ -77,8 +106,7 @@ export function AdminPage() {
   async function marquerPresent(brut: string) {
     const valeur = extraireCode(brut) ?? brut.trim().toUpperCase()
     if (!/^SLN-[A-Z0-9]{6}$/.test(valeur)) {
-      setFlashOk(false)
-      setFlash('Code introuvable.')
+      signaler(false, 'Code introuvable.')
       return
     }
     const maintenant = Date.now()
@@ -89,27 +117,23 @@ export function AdminPage() {
     const { data } = await supabase.from('participants').select('*').eq('code', valeur).maybeSingle()
     const participant = data as Participant | null
     if (!participant) {
-      setFlashOk(false)
-      setFlash('Code introuvable.')
+      signaler(false, 'Code introuvable.')
       return
     }
     if (participant.statut === 'annule') {
-      setFlashOk(false)
-      setFlash(`${nomComplet(participant)} — inscription annulée.`)
+      signaler(false, `${nomComplet(participant)} — inscription annulée.`)
       return
     }
     if (participant.statut !== 'present') {
       const { error } = await supabase.from('participants').update({ statut: 'present' }).eq('id', participant.id)
       if (error) {
-        setFlashOk(false)
-        setFlash('Le pointage n’a pas abouti.')
+        signaler(false, 'Le pointage n’a pas abouti.')
         recents.current.delete(valeur)
         return
       }
       void charger()
     }
-    setFlashOk(true)
-    setFlash(`${nomComplet(participant)} — présent`)
+    signaler(true, `Scanné — ${nomComplet(participant)}`)
     navigator.vibrate?.(40)
   }
 
@@ -128,12 +152,10 @@ export function AdminPage() {
     if (!confirme) return
     const { error } = await supabase.from('participants').delete().eq('id', participant.id)
     if (error) {
-      setFlashOk(false)
-      setFlash('La suppression n’a pas abouti.')
+      signaler(false, 'La suppression n’a pas abouti.')
       return
     }
-    setFlashOk(true)
-    setFlash(`${nomComplet(participant)} — inscription supprimée.`)
+    signaler(true, `${nomComplet(participant)} — inscription supprimée.`)
     if (lignes.length === 1 && page > 0) setPage((n) => Math.max(0, n - 1))
     else void charger()
   }
@@ -164,15 +186,23 @@ export function AdminPage() {
         <section className="rounded-2xl border border-line bg-white p-4">
           <button
             type="button"
-            onClick={() => setCamera((ouvert) => !ouvert)}
+            onClick={() => {
+              preparerSon()
+              setCamera((ouvert) => !ouvert)
+            }}
             className="flex w-full items-center justify-center gap-3 rounded-2xl bg-red py-5 text-lg font-semibold text-white hover:bg-red-dark"
           >
             <ScanLine className="size-6" />
             {camera ? 'Arrêter le scan' : 'Scanner un QR code'}
           </button>
           <ScanPresence actif={camera} onCode={(valeur) => void marquerPresent(valeur)} />
+          {flash && (
+            <p className={`mt-3 text-center text-lg font-semibold ${flashOk ? 'text-green' : 'text-red'}`} role="status">
+              {flash}
+            </p>
+          )}
         </section>
-        <section className="grid gap-3 sm:grid-cols-3">
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <article className="rounded-2xl border border-line bg-white p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Inscriptions</p>
             <p className="mt-1 text-3xl font-semibold">{volume}</p>
@@ -181,7 +211,7 @@ export function AdminPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Présents</p>
             <p className="mt-1 text-3xl font-semibold text-green">{presents}</p>
           </article>
-          <article className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-white p-4">
+          <article className="col-span-2 flex items-center justify-between gap-3 rounded-2xl border border-line bg-white p-4 sm:col-span-1">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Campagne</p>
               <p className="mt-1 font-semibold">{ouverts ? 'Ouverte' : 'Fermée'}</p>
@@ -211,14 +241,10 @@ export function AdminPage() {
               }}
               placeholder="SLN-XXXXXX"
               autoComplete="off"
+              onFocus={preparerSon}
               className="w-full rounded-2xl border border-line bg-paper px-4 py-3 font-semibold tracking-[0.14em] outline-none ring-red/20 focus:ring-4"
             />
           </label>
-          {flash && (
-            <p className={`mt-3 text-lg font-semibold ${flashOk ? 'text-green' : 'text-red'}`} role="status">
-              {flash}
-            </p>
-          )}
         </form>
 
         <section className="rounded-2xl border border-line bg-white">

@@ -13,7 +13,7 @@ export type Participant = {
 }
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-const TITRE = 'Salon 2026'
+const TITRE = 'Salon de Métier'
 
 export function codeAleatoire() {
   const bytes = new Uint8Array(6)

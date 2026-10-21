@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { BandeauAuchan } from '../components/BandeauAuchan'
 import { LogoAuchan } from '../components/LogoAuchan'
 import { inscrire, type FormulaireInscription } from '../lib/api'
@@ -97,11 +97,12 @@ export function InscriptionPage() {
       )}
 
       {isConfigured && ouverte === false && (
-        <div className="mt-8 rounded-2xl border border-line bg-paper p-4 text-sm">
-          Les inscriptions sont fermées pour le moment.
+        <div className="mt-8 rounded-2xl border border-line bg-card p-8 text-center shadow-[0_16px_40px_rgba(224,0,26,0.08)]">
+          <p className="text-xl font-semibold">Les inscriptions sont arrêtées.</p>
         </div>
       )}
 
+      {isConfigured && ouverte !== false && (
       <form onSubmit={(event) => void onSubmit(event)} className="relative mt-8 space-y-4 overflow-hidden rounded-2xl border border-line bg-card p-6 shadow-[0_16px_40px_rgba(224,0,26,0.08)]">
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-red">Inscription</p>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -145,11 +146,7 @@ export function InscriptionPage() {
           {envoi ? 'Enregistrement…' : 'Recevoir mon badge'}
         </button>
       </form>
-      <p className="mt-6 text-sm text-muted">
-        <Link to="/admin/connexion" className="font-medium text-ink underline-offset-4 hover:underline">
-          Espace équipe
-        </Link>
-      </p>
+      )}
     </BandeauAuchan>
   )
 }
