@@ -1,5 +1,5 @@
 export const evenement = {
   organisation: 'Auchan Retail Sénégal',
-  titre: 'Salon de Métier',
+  titre: 'Salon des Métiers',
   accroche: 'Inscrivez-vous pour recevoir votre badge d’accès.',
 }

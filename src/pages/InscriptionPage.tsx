@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BandeauAuchan } from '../components/BandeauAuchan'
-import { LogoAuchan } from '../components/LogoAuchan'
+import { LogoSalon } from '../components/LogoSalon'
 import { inscrire, type FormulaireInscription } from '../lib/api'
 import { telechargerBadge } from '../lib/badgeImage'
 import { evenement } from '../lib/evenement'
@@ -38,18 +38,36 @@ export function InscriptionPage() {
     setForm((actuel) => ({ ...actuel, [cle]: valeur }))
   }
 
+  function chiffres(valeur: string) {
+    return valeur.replace(/\D/g, '').slice(0, 15)
+  }
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     setErreur(null)
-    setEnvoi(true)
     const prenom = form.prenom.trim()
     const nom = form.nom.trim()
+    const email = form.email.trim()
+    const telephone = chiffres(form.telephone)
+    if (prenom.length < 2 || nom.length < 2) {
+      setErreur('Indiquez votre prénom et votre nom.')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setErreur('Indiquez une adresse e-mail valide.')
+      return
+    }
+    if (!/^\d{8,15}$/.test(telephone)) {
+      setErreur('Indiquez un numéro de téléphone, sans lettres.')
+      return
+    }
+    setEnvoi(true)
     const resultat = await inscrire({
       ...form,
       prenom,
       nom,
-      email: form.email.trim(),
-      telephone: form.telephone.trim(),
+      email,
+      telephone,
       organisation: form.organisation.trim(),
       fonction: form.fonction.trim(),
     })
@@ -69,10 +87,10 @@ export function InscriptionPage() {
         emailEnvoye: resultat.emailEnvoye,
         emailMessage: resultat.emailMessage,
         dejaInscrit: resultat.dejaInscrit,
-        email: form.email.trim(),
+        email,
         prenom,
         nom,
-        telephone: form.telephone.trim(),
+        telephone,
       },
     })
   }
@@ -81,11 +99,12 @@ export function InscriptionPage() {
 
   return (
     <BandeauAuchan>
-      <LogoAuchan className="h-11 w-auto max-w-[12rem] object-contain object-left sm:h-12" />
-      <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.28em] text-red sm:mt-6 sm:text-[12px]">
+      <h1>
+        <LogoSalon className="h-auto w-full max-w-[20rem] object-contain object-left" />
+      </h1>
+      <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.28em] text-red sm:text-[12px]">
         {evenement.organisation}
       </p>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-5xl">{evenement.titre}</h1>
       <p className="mt-3 text-muted">{evenement.accroche}</p>
 
       {!isConfigured && (
@@ -108,11 +127,11 @@ export function InscriptionPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium">Prénom</span>
-            <input required autoComplete="given-name" value={form.prenom} onChange={(e) => maj('prenom', e.target.value)} className={champ} />
+            <input required minLength={2} autoComplete="given-name" value={form.prenom} onChange={(e) => maj('prenom', e.target.value)} className={champ} />
           </label>
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium">Nom</span>
-            <input required autoComplete="family-name" value={form.nom} onChange={(e) => maj('nom', e.target.value)} className={champ} />
+            <input required minLength={2} autoComplete="family-name" value={form.nom} onChange={(e) => maj('nom', e.target.value)} className={champ} />
           </label>
         </div>
         <label className="block">
@@ -121,7 +140,18 @@ export function InscriptionPage() {
         </label>
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium">Téléphone</span>
-          <input type="tel" autoComplete="tel" value={form.telephone} onChange={(e) => maj('telephone', e.target.value)} className={champ} />
+          <input
+            required
+            type="text"
+            inputMode="numeric"
+            autoComplete="tel"
+            pattern="[0-9]{8,15}"
+            minLength={8}
+            maxLength={15}
+            value={form.telephone}
+            onChange={(e) => maj('telephone', chiffres(e.target.value))}
+            className={champ}
+          />
         </label>
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium">Organisation</span>

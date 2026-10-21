@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { BandeauAuchan } from '../components/BandeauAuchan'
-import { LogoAuchan } from '../components/LogoAuchan'
+import { LogoSalon } from '../components/LogoSalon'
 import { QrBadge } from '../components/QrBadge'
 import { telechargerBadge } from '../lib/badgeImage'
 import { evenement } from '../lib/evenement'
@@ -76,7 +76,7 @@ export function ConfirmationPage() {
 
   return (
     <BandeauAuchan>
-      <LogoAuchan className="h-11 w-auto max-w-[12rem] object-contain object-left" />
+      <LogoSalon className="h-auto w-full max-w-[20rem] object-contain object-left" />
       <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.28em] text-red">{evenement.organisation}</p>
       <h1 className="mt-2 text-3xl font-semibold tracking-tight">
         {etat.dejaInscrit ? 'Vous êtes déjà inscrit' : 'Inscription enregistrée'}

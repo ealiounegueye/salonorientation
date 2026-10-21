@@ -1,9 +1,10 @@
 import { useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { evenement } from '../lib/evenement'
 
 export function AppFooter() {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const appuis = useRef(0)
   const repos = useRef<number | null>(null)
 
@@ -31,7 +32,13 @@ export function AppFooter() {
           <span className="size-1.5 rounded-full bg-black" />
         </button>
       </span>
-      <span className="truncate">{evenement.titre}</span>
+      {pathname === '/admin/connexion' ? (
+        <Link to="/" className="truncate underline-offset-2 hover:underline">
+          {evenement.titre}
+        </Link>
+      ) : (
+        <span className="truncate">{evenement.titre}</span>
+      )}
     </footer>
   )
 }

@@ -169,6 +169,10 @@ begin
     return jsonb_build_object('ok', false, 'message', 'Indiquez une adresse e-mail valide.');
   end if;
 
+  if v_telephone is null or v_telephone !~ '^[0-9]{8,15}$' then
+    return jsonb_build_object('ok', false, 'message', 'Indiquez un numéro de téléphone.');
+  end if;
+
   select * into v_row
   from public.participants
   where lower(email) = v_email
