@@ -8,6 +8,7 @@ export function AppHeader({ subtitle }: { subtitle: string }) {
   const { profile, signOut } = useAuth()
   const { pathname } = useLocation()
   const listeActive = pathname === '/admin'
+  const reglagesActifs = pathname === '/admin/reglages'
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
@@ -35,6 +36,16 @@ export function AppHeader({ subtitle }: { subtitle: string }) {
               }
             >
               Participants
+            </Link>
+            <Link
+              to="/admin/reglages"
+              className={
+                reglagesActifs
+                  ? 'rounded-full bg-red px-2.5 py-1.5 text-white sm:px-3'
+                  : 'rounded-full border border-line px-2.5 py-1.5 hover:border-red/40 sm:px-3'
+              }
+            >
+              Réglages
             </Link>
           </nav>
           <div className="hidden text-right sm:block">

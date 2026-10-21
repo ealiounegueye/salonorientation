@@ -28,5 +28,5 @@ export async function exigerAdmin(req: Request) {
     return { erreur: json({ ok: false, message: 'Accès refusé.' }, 403) }
   }
 
-  return { admin }
+  return { admin, userId: data.user.id }
 }

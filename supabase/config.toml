@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.renvoyer-badge]
 verify_jwt = true
+
+[functions.equipe]
+verify_jwt = true

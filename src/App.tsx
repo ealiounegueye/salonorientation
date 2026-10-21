@@ -7,6 +7,7 @@ import { AdminParticipantPage } from './pages/AdminParticipantPage'
 import { ConfirmationPage } from './pages/ConfirmationPage'
 import { InscriptionPage } from './pages/InscriptionPage'
 import { LoginPage } from './pages/LoginPage'
+import { ReglagesPage } from './pages/ReglagesPage'
 
 export default function App() {
   return (
@@ -23,6 +24,14 @@ export default function App() {
                 element={
                   <Protected>
                     <AdminPage />
+                  </Protected>
+                }
+              />
+              <Route
+                path="/admin/reglages"
+                element={
+                  <Protected>
+                    <ReglagesPage />
                   </Protected>
                 }
               />

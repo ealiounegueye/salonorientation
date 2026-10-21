@@ -54,6 +54,16 @@ export async function inscrire(formulaire: FormulaireInscription): Promise<Resul
   }
 }
 
+export async function gererEquipe(
+  corps: { action: 'creer'; nom: string; email: string; password: string } | { action: 'retirer'; id: string },
+): Promise<{ ok: boolean; message: string }> {
+  const { data, error } = await supabase.functions.invoke('equipe', { body: corps })
+  const reponse = data as { ok?: boolean; message?: string } | null
+  if (reponse?.message) return { ok: Boolean(reponse.ok), message: reponse.message }
+  if (error) return { ok: false, message: 'Le réglage n’a pas abouti.' }
+  return { ok: false, message: 'Le réglage n’a pas abouti.' }
+}
+
 export async function renvoyerBadge(id: string): Promise<ResultatEnvoi> {
   const { data, error } = await supabase.functions.invoke('renvoyer-badge', { body: { id } })
   if (error || !data) {
