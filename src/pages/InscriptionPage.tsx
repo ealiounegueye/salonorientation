@@ -8,7 +8,16 @@ import { evenement } from '../lib/evenement'
 import { isConfigured, supabase } from '../lib/supabase'
 
 const champ =
-  'w-full rounded-2xl border border-line bg-paper px-4 py-3 outline-none ring-red/20 placeholder:text-muted/70 focus:ring-4'
+  'w-full rounded-2xl border border-line bg-white px-4 py-3.5 outline-none ring-red/20 placeholder:text-muted/70 focus:border-red/40 focus:ring-4'
+
+function etiquette(texte: string, obligatoire = false) {
+  return (
+    <span className="mb-1.5 block text-sm font-medium">
+      {texte}
+      {obligatoire ? <span className="text-red"> *</span> : null}
+    </span>
+  )
+}
 
 const vide: FormulaireInscription = {
   prenom: '',
@@ -98,14 +107,22 @@ export function InscriptionPage() {
   const formulaireBloque = !isConfigured || ouverte === false || envoi
 
   return (
-    <BandeauAuchan>
-      <h1>
-        <LogoSalon className="h-auto w-full max-w-[20rem] object-contain object-left" />
-      </h1>
-      <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.28em] text-red sm:text-[12px]">
-        {evenement.organisation}
-      </p>
-      <p className="mt-3 text-muted">{evenement.accroche}</p>
+    <BandeauAuchan fond="bg-[linear-gradient(180deg,#ffffff_0%,#fff6f6_46%,#f4fbf7_100%)]">
+      <header className="text-center">
+        <h1 className="flex justify-center">
+          <LogoSalon className="h-auto w-full max-w-[18.5rem] sm:max-w-[22rem]" />
+        </h1>
+        <div className="mx-auto mt-4 flex h-1 w-24 overflow-hidden rounded-full" aria-hidden="true">
+          <span className="w-2/3 bg-red" />
+          <span className="w-1/3 bg-green" />
+        </div>
+        <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.28em] text-red sm:text-[12px]">
+          {evenement.organisation}
+        </p>
+        <p className="mx-auto mt-3 max-w-sm text-xl font-semibold leading-snug tracking-tight text-ink sm:text-2xl">
+          {evenement.accroche}
+        </p>
+      </header>
 
       {!isConfigured && (
         <div className="mt-8 rounded-2xl border border-gold/30 bg-gold/10 p-4 text-sm text-ink">
@@ -122,24 +139,28 @@ export function InscriptionPage() {
       )}
 
       {isConfigured && ouverte !== false && (
-      <form onSubmit={(event) => void onSubmit(event)} className="relative mt-8 space-y-4 overflow-hidden rounded-2xl border border-line bg-card p-6 shadow-[0_16px_40px_rgba(224,0,26,0.08)]">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-red">Inscription</p>
+      <form onSubmit={(event) => void onSubmit(event)} className="relative mt-8 space-y-4 overflow-hidden rounded-[1.75rem] border border-line bg-white p-6 shadow-[0_22px_50px_rgba(224,0,26,0.1)] sm:p-8">
+        <div className="absolute inset-x-0 top-0 h-1.5 bg-red" aria-hidden="true" />
+        <div className="pt-1">
+          <p className="text-lg font-semibold tracking-tight">Inscription</p>
+          <p className="mt-1 text-sm text-muted">Les champs marqués d’une * sont obligatoires.</p>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium">Prénom</span>
+            {etiquette('Prénom', true)}
             <input required minLength={2} autoComplete="given-name" value={form.prenom} onChange={(e) => maj('prenom', e.target.value)} className={champ} />
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium">Nom</span>
+            {etiquette('Nom', true)}
             <input required minLength={2} autoComplete="family-name" value={form.nom} onChange={(e) => maj('nom', e.target.value)} className={champ} />
           </label>
         </div>
         <label className="block">
-          <span className="mb-1.5 block text-sm font-medium">E-mail</span>
+          {etiquette('E-mail', true)}
           <input required type="email" autoComplete="email" value={form.email} onChange={(e) => maj('email', e.target.value)} className={champ} />
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-sm font-medium">Téléphone</span>
+          {etiquette('Téléphone', true)}
           <input
             required
             type="text"
@@ -154,11 +175,11 @@ export function InscriptionPage() {
           />
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-sm font-medium">Organisation</span>
+          {etiquette('Organisation')}
           <input autoComplete="organization" value={form.organisation} onChange={(e) => maj('organisation', e.target.value)} className={champ} />
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-sm font-medium">Fonction</span>
+          {etiquette('Fonction')}
           <input autoComplete="organization-title" value={form.fonction} onChange={(e) => maj('fonction', e.target.value)} className={champ} />
         </label>
         <div className="absolute h-0 w-0 overflow-hidden" aria-hidden="true">
@@ -171,10 +192,11 @@ export function InscriptionPage() {
         <button
           type="submit"
           disabled={formulaireBloque}
-          className="w-full rounded-full bg-red py-3.5 text-sm font-semibold tracking-wide text-white uppercase hover:bg-red-dark disabled:opacity-60"
+          className="mt-2 w-full rounded-full bg-red py-4 text-sm font-semibold tracking-wide text-white uppercase shadow-[0_12px_24px_rgba(224,0,26,0.28)] hover:bg-red-dark disabled:opacity-60"
         >
           {envoi ? 'Enregistrement…' : 'Recevoir mon badge'}
         </button>
+        <p className="text-center text-xs leading-relaxed text-muted">Le badge se télécharge juste après l’inscription.</p>
       </form>
       )}
     </BandeauAuchan>
