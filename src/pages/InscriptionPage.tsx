@@ -119,7 +119,7 @@ export function InscriptionPage() {
         <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.28em] text-red sm:text-[12px]">
           {evenement.organisation}
         </p>
-        <p className="mx-auto mt-3 max-w-sm text-xl font-semibold leading-snug tracking-tight text-ink sm:text-2xl">
+        <p className="mt-3 whitespace-nowrap text-xs font-semibold tracking-tight text-ink sm:text-sm">
           {evenement.accroche}
         </p>
       </header>
