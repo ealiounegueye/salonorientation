@@ -51,6 +51,12 @@ export async function telechargerBadge(opts: { code: string; prenom: string; nom
   const lien = document.createElement('a')
   lien.href = url
   lien.download = `badge-${opts.code}.png`
+  lien.rel = 'noopener'
+  lien.style.display = 'none'
+  document.body.appendChild(lien)
   lien.click()
-  URL.revokeObjectURL(url)
+  window.setTimeout(() => {
+    lien.remove()
+    URL.revokeObjectURL(url)
+  }, 60_000)
 }

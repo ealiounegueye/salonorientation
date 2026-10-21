@@ -41,3 +41,22 @@ select {
   min-height: 100%;
   min-height: 100vh;
 }
+
+#lecteur-presence {
+  position: relative;
+  width: min(100%, 28rem);
+  margin-inline: auto;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: #111;
+}
+
+#lecteur-presence video {
+  position: absolute !important;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  object-fit: cover !important;
+}

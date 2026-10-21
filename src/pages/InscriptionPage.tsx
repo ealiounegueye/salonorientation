@@ -59,6 +59,11 @@ export function InscriptionPage() {
       return
     }
     await telechargerBadge({ code: resultat.code, prenom, nom })
+    try {
+      sessionStorage.setItem(`badge-dl:${resultat.code}`, '1')
+    } catch {
+      /* navigation privée */
+    }
     navigate(`/confirmation/${resultat.code}`, {
       state: {
         emailEnvoye: resultat.emailEnvoye,

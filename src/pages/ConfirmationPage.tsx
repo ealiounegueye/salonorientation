@@ -31,6 +31,22 @@ export function ConfirmationPage() {
   const nomAffiche = badge ? nomComplet(badge) : [etat.prenom, etat.nom].filter(Boolean).join(' ')
 
   useEffect(() => {
+    if (!vientDeSinscrire) return
+    const cle = `badge-dl:${code}`
+    try {
+      if (sessionStorage.getItem(cle)) return
+      sessionStorage.setItem(cle, '1')
+    } catch {
+      return
+    }
+    void telechargerBadge({
+      code: code.toUpperCase(),
+      prenom: etat.prenom ?? '',
+      nom: etat.nom ?? '',
+    })
+  }, [vientDeSinscrire, code, etat.prenom, etat.nom])
+
+  useEffect(() => {
     if (!isConfigured) return
     let cancelled = false
     void supabase.rpc('badge_public', { p_code: code }).then(({ data, error }) => {

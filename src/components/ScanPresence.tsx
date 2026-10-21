@@ -18,15 +18,16 @@ export function ScanPresence({ actif, onCode }: { actif: boolean; onCode: (code:
       if (generation.current !== tour) return
       const scanner = new Html5Qrcode('lecteur-presence', false)
       instance = scanner
+      const cameras = await Html5Qrcode.getCameras().catch(() => [])
+      const arriere = cameras.find((camera) => /back|rear|arri|environment|wide/i.test(camera.label))
+      const cameraChoisie = arriere?.id ?? cameras.at(-1)?.id ?? { facingMode: 'environment' }
       try {
         await scanner.start(
-          { facingMode: 'environment' },
+          cameraChoisie,
           {
-            fps: 8,
-            qrbox: (largeur, hauteur) => {
-              const bord = Math.floor(Math.min(largeur, hauteur) * 0.72)
-              return { width: bord, height: bord }
-            },
+            fps: 10,
+            aspectRatio: 1,
+            qrbox: { width: 230, height: 230 },
           },
           (texte) => {
             const code = extraireCode(texte)
@@ -61,7 +62,7 @@ export function ScanPresence({ actif, onCode }: { actif: boolean; onCode: (code:
 
   return (
     <div className="mt-3">
-      <div id="lecteur-presence" className="min-h-64 overflow-hidden rounded-2xl bg-ink" />
+      <div id="lecteur-presence" />
       {erreur ? (
         <p className="mt-2 text-sm font-medium text-red">{erreur}</p>
       ) : (
