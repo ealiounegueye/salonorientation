@@ -77,7 +77,7 @@ export function ConfirmationPage() {
 
   return (
     <BandeauAuchan>
-      <LogoSalon className="h-auto w-full max-w-[20rem] object-contain object-left" />
+      <LogoSalon className="block h-auto w-full object-contain" />
       <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.28em] text-red">{evenement.organisation}</p>
       <h1 className="mt-2 text-3xl font-semibold tracking-tight">
         {etat.dejaInscrit ? 'Vous êtes déjà inscrit' : 'Inscription enregistrée'}
