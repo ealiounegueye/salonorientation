@@ -128,7 +128,7 @@ export function AdminPage() {
 
   async function marquerPresent(brut: string) {
     const valeur = extraireCode(brut) ?? brut.trim().toUpperCase()
-    if (!/^SLN-[A-Z0-9]{6}$/.test(valeur)) {
+    if (!/^(SDM-\d{6}|SLN-[A-Z0-9]{6})$/.test(valeur)) {
       signaler(false, 'Code introuvable.')
       return
     }
@@ -264,7 +264,7 @@ export function AdminPage() {
                 setCode('')
                 void marquerPresent(lu)
               }}
-              placeholder="SLN-XXXXXX"
+              placeholder="SDM-452675"
               autoComplete="off"
               onFocus={preparerSon}
               className="w-full rounded-2xl border border-line bg-paper px-4 py-3 font-semibold tracking-[0.14em] outline-none ring-red/20 focus:ring-4"

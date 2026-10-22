@@ -12,15 +12,14 @@ export type Participant = {
   statut: string
 }
 
-const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const TITRE = 'Salon des Métiers'
 
 export function codeAleatoire() {
   const bytes = new Uint8Array(6)
   crypto.getRandomValues(bytes)
   let corps = ''
-  for (const byte of bytes) corps += ALPHABET[byte % ALPHABET.length]
-  return `SLN-${corps}`
+  for (const byte of bytes) corps += String(byte % 10)
+  return `SDM-${corps}`
 }
 
 function echapper(valeur: string) {

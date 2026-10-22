@@ -36,7 +36,7 @@ export function nomComplet(personne: { prenom: string; nom: string }) {
 }
 
 export function extraireCode(valeur: string) {
-  const match = valeur.toUpperCase().match(/SLN-[A-Z0-9]{6}/)
+  const match = valeur.toUpperCase().match(/SDM-\d{6}|SLN-[A-Z0-9]{6}/)
   return match?.[0] ?? null
 }
 

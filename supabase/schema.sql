@@ -179,7 +179,7 @@ revoke all on function public.badge_public(text) from public, anon, authenticate
 grant execute on function public.badge_public(text) to anon, authenticated;
 
 -- ---------------------------------------------------------------------------
--- Inscription publique : crée le code SLN-XXXXXX, ou renvoie le badge existant
+-- Inscription publique : crée le code SDM-000000, ou renvoie le badge existant
 -- ---------------------------------------------------------------------------
 
 drop function if exists public.inscrire(text, text, text, text, text, text, text);
@@ -217,9 +217,7 @@ declare
   v_row public.participants;
   v_code text;
   v_essai int;
-  v_pos int;
   v_i int;
-  alphabet constant text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 begin
   if v_website <> '' then
     return jsonb_build_object('ok', false, 'message', 'Inscription impossible.');
@@ -273,13 +271,9 @@ begin
   end if;
 
   for v_essai in 1..5 loop
-    v_code := 'SLN-';
+    v_code := 'SDM-';
     for v_i in 1..6 loop
-      v_pos := 1 + floor(random() * length(alphabet))::int;
-      if v_pos > length(alphabet) then
-        v_pos := length(alphabet);
-      end if;
-      v_code := v_code || substr(alphabet, v_pos, 1);
+      v_code := v_code || floor(random() * 10)::int;
     end loop;
 
     begin
