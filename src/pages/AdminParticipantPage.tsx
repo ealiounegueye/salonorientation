@@ -86,7 +86,7 @@ export function AdminParticipantPage() {
           <div className="mt-4 grid gap-4 rounded-2xl border border-line bg-white p-6 sm:grid-cols-[auto_1fr]">
             <div>
               <QrBadge value={participant.code} />
-              <InfosLieu className="mt-3 max-w-56" />
+              <InfosLieu className="mt-2" />
             </div>
             <div>
               <p className="text-sm font-semibold tracking-[0.18em] text-red">{participant.code}</p>

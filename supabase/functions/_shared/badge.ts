@@ -79,10 +79,9 @@ export async function envoyerBadge(participant: Participant) {
               </td>
             </tr>
             <tr>
-              <td align="center" style="padding:0 24px 12px;font-size:12px;line-height:1.5;color:#6b6b6b;">
+              <td align="center" style="padding:0 24px 8px;font-size:11px;line-height:1.35;color:#6b6b6b;">
                 À côté du Cinéma Pathé à Mermoz<br />
-                Dates : 18, 19, 20 novembre 2026<br />
-                Tous les jours de 9h à 17h.
+                18, 19, 20 novembre 2026 · 9h–17h
               </td>
             </tr>
             <tr>

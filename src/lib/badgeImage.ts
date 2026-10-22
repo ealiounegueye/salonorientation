@@ -20,7 +20,7 @@ export async function telechargerBadge(opts: { code: string; prenom: string; nom
   const image = await chargerImage(dataUrl)
   const canvas = document.createElement('canvas')
   canvas.width = 800
-  canvas.height = 1180
+  canvas.height = 1060
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
@@ -34,21 +34,18 @@ export async function telechargerBadge(opts: { code: string; prenom: string; nom
   ctx.fillText('Auchan Retail Sénégal', 400, 88)
   ctx.font = '700 42px Figtree, sans-serif'
   ctx.fillText('Salon des Métiers', 400, 148)
-  ctx.drawImage(image, 120, 190, 560, 560)
-  ctx.font = '700 52px Figtree, sans-serif'
-  ctx.fillText(opts.code, 400, 830)
+  ctx.drawImage(image, 90, 172, 620, 620)
+  ctx.font = '700 48px Figtree, sans-serif'
+  ctx.fillText(opts.code, 400, 860)
   const nom = [opts.prenom, opts.nom].filter(Boolean).join(' ').trim()
   if (nom) {
-    ctx.font = '500 32px Figtree, sans-serif'
-    ctx.fillText(nom, 400, 886)
+    ctx.font = '500 28px Figtree, sans-serif'
+    ctx.fillText(nom, 400, 904)
   }
   ctx.fillStyle = '#6b6b6b'
-  ctx.font = '500 26px Figtree, sans-serif'
-  ctx.fillText('Présentez ce QR code à l’entrée.', 400, 960)
-  ctx.font = '500 22px Figtree, sans-serif'
-  ctx.fillText(evenement.lieu, 400, 1024)
-  ctx.fillText(evenement.dates, 400, 1062)
-  ctx.fillText(evenement.horaires, 400, 1100)
+  ctx.font = '500 18px Figtree, sans-serif'
+  ctx.fillText(evenement.lieu, 400, 956)
+  ctx.fillText(`${evenement.dates}  ·  ${evenement.horaires}`, 400, 986)
 
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
   if (!blob) return
