@@ -29,6 +29,8 @@ create table if not exists public.participants (
   telephone text,
   organisation text,
   fonction text,
+  profil text,
+  dates text,
   statut text not null default 'inscrit' check (statut in ('inscrit', 'present', 'annule')),
   email_envoye_at timestamptz,
   created_at timestamptz not null default now()
@@ -46,6 +48,14 @@ create index if not exists participants_created_idx
 
 create index if not exists participants_statut_idx
   on public.participants (statut);
+
+alter table public.participants add column if not exists profil text;
+alter table public.participants add column if not exists dates text;
+
+alter table public.participants drop constraint if exists participants_profil_check;
+alter table public.participants
+  add constraint participants_profil_check
+  check (profil is null or profil in ('professionnel', 'etudiant', 'chercheur', 'visiteur'));
 
 -- ---------------------------------------------------------------------------
 -- Profil admin à la création d'un compte Auth
@@ -127,6 +137,9 @@ grant execute on function public.badge_public(text) to anon, authenticated;
 -- Inscription publique : crée le code SLN-XXXXXX, ou renvoie le badge existant
 -- ---------------------------------------------------------------------------
 
+drop function if exists public.inscrire(text, text, text, text, text, text, text);
+drop function if exists public.inscrire(text, text, text, text, text, text, text, text, text);
+
 create or replace function public.inscrire(
   p_prenom text,
   p_nom text,
@@ -134,7 +147,9 @@ create or replace function public.inscrire(
   p_telephone text default '',
   p_organisation text default '',
   p_fonction text default '',
-  p_website text default ''
+  p_website text default '',
+  p_profil text default '',
+  p_dates text default ''
 )
 returns jsonb
 language plpgsql
@@ -149,6 +164,9 @@ declare
   v_organisation text := nullif(left(btrim(coalesce(p_organisation, '')), 120), '');
   v_fonction text := nullif(left(btrim(coalesce(p_fonction, '')), 120), '');
   v_website text := left(btrim(coalesce(p_website, '')), 200);
+  v_profil text := lower(left(btrim(coalesce(p_profil, '')), 40));
+  v_brut_dates text := regexp_replace(coalesce(p_dates, ''), '[^0-9,]', '', 'g');
+  v_dates text;
   v_ouverte boolean;
   v_row public.participants;
   v_code text;
@@ -171,6 +189,21 @@ begin
 
   if v_telephone is null or v_telephone !~ '^[0-9]{8,15}$' then
     return jsonb_build_object('ok', false, 'message', 'Indiquez un numéro de téléphone.');
+  end if;
+
+  if v_profil not in ('professionnel', 'etudiant', 'chercheur', 'visiteur') then
+    return jsonb_build_object('ok', false, 'message', 'Choisissez votre profil.');
+  end if;
+
+  v_dates := nullif(concat_ws(
+    ',',
+    case when v_brut_dates ~ '(^|,)18(,|$)' then '18' else null end,
+    case when v_brut_dates ~ '(^|,)19(,|$)' then '19' else null end,
+    case when v_brut_dates ~ '(^|,)20(,|$)' then '20' else null end
+  ), '');
+
+  if v_dates is null then
+    return jsonb_build_object('ok', false, 'message', 'Choisissez au moins une date.');
   end if;
 
   select * into v_row
@@ -201,8 +234,8 @@ begin
     end loop;
 
     begin
-      insert into public.participants (code, prenom, nom, email, telephone, organisation, fonction, statut)
-      values (v_code, v_prenom, v_nom, v_email, v_telephone, v_organisation, v_fonction, 'inscrit')
+      insert into public.participants (code, prenom, nom, email, telephone, organisation, fonction, profil, dates, statut)
+      values (v_code, v_prenom, v_nom, v_email, v_telephone, v_organisation, v_fonction, v_profil, v_dates, 'inscrit')
       returning * into v_row;
       return jsonb_build_object('ok', true, 'code', v_row.code, 'deja_inscrit', false);
     exception
@@ -221,8 +254,8 @@ begin
 end;
 $$;
 
-revoke all on function public.inscrire(text, text, text, text, text, text, text) from public, anon, authenticated;
-grant execute on function public.inscrire(text, text, text, text, text, text, text) to anon, authenticated;
+revoke all on function public.inscrire(text, text, text, text, text, text, text, text, text) from public, anon, authenticated;
+grant execute on function public.inscrire(text, text, text, text, text, text, text, text, text) to anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- RLS

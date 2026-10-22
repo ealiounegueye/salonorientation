@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AppHeader } from '../components/AppHeader'
 import { QrBadge } from '../components/QrBadge'
 import { renvoyerBadge } from '../lib/api'
-import { formatQuand, LIBELLE_STATUT, nomComplet } from '../lib/format'
+import { formatQuand, libelleDates, libelleProfil, LIBELLE_STATUT, nomComplet } from '../lib/format'
 import { supabase } from '../lib/supabase'
 import type { Participant, StatutParticipant } from '../types'
 
@@ -95,6 +95,14 @@ export function AdminParticipantPage() {
                 <div>
                   <dt className="inline text-muted">Téléphone : </dt>
                   <dd className="inline">{participant.telephone || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="inline text-muted">Profil : </dt>
+                  <dd className="inline">{libelleProfil(participant.profil) || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="inline text-muted">Dates : </dt>
+                  <dd className="inline">{libelleDates(participant.dates) || '—'}</dd>
                 </div>
                 <div>
                   <dt className="inline text-muted">Organisation : </dt>

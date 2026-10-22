@@ -4,7 +4,7 @@ import { Download, ScanLine, Search, Trash2 } from 'lucide-react'
 import { AppHeader } from '../components/AppHeader'
 import { ScanPresence } from '../components/ScanPresence'
 import { useAuth } from '../context/AuthContext'
-import { exporterCsv, extraireCode, filtreRecherche, formatQuand, LIBELLE_STATUT, nomComplet } from '../lib/format'
+import { exporterCsv, extraireCode, filtreRecherche, formatQuand, libelleDates, libelleProfil, LIBELLE_STATUT, nomComplet } from '../lib/format'
 import { supabase } from '../lib/supabase'
 import type { Participant, StatutParticipant } from '../types'
 
@@ -312,7 +312,12 @@ export function AdminPage() {
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-medium">{nomComplet(ligne)}</p>
-                      <p className="text-muted">{ligne.organisation || ligne.fonction || '—'}</p>
+                      <p className="text-muted">
+                        {[libelleProfil(ligne.profil), libelleDates(ligne.dates)].filter(Boolean).join(' · ') ||
+                          ligne.organisation ||
+                          ligne.fonction ||
+                          '—'}
+                      </p>
                     </td>
                     <td className="px-4 py-3">
                       <p>{ligne.email}</p>

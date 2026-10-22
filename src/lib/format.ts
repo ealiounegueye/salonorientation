@@ -1,4 +1,24 @@
-import type { Participant, StatutParticipant } from '../types'
+import type { Participant, ProfilParticipant, StatutParticipant } from '../types'
+
+export const JOURS = ['18', '19', '20'] as const
+
+export const PROFILS: { valeur: ProfilParticipant; libelle: string }[] = [
+  { valeur: 'professionnel', libelle: 'Professionnel' },
+  { valeur: 'etudiant', libelle: 'Étudiant' },
+  { valeur: 'chercheur', libelle: 'Chercheur d’emploi' },
+  { valeur: 'visiteur', libelle: 'Visiteur' },
+]
+
+export function libelleProfil(profil: string | null | undefined) {
+  return PROFILS.find((entree) => entree.valeur === profil)?.libelle ?? ''
+}
+
+export function libelleDates(dates: string | null | undefined) {
+  if (!dates) return ''
+  const jours = dates.split(',').map((jour) => jour.trim()).filter(Boolean)
+  if (JOURS.every((jour) => jours.includes(jour))) return 'Toutes les dates'
+  return jours.join(', ')
+}
 
 const dateur = new Intl.DateTimeFormat('fr-FR', {
   dateStyle: 'medium',
@@ -40,7 +60,7 @@ export function filtreRecherche(saisie: string) {
 }
 
 export function exporterCsv(lignes: Participant[]) {
-  const entete = ['Code', 'Prénom', 'Nom', 'E-mail', 'Téléphone', 'Organisation', 'Fonction', 'Statut', 'Inscrit le']
+  const entete = ['Code', 'Prénom', 'Nom', 'E-mail', 'Téléphone', 'Profil', 'Dates', 'Organisation', 'Fonction', 'Statut', 'Inscrit le']
   const corps = lignes.map((ligne) =>
     [
       ligne.code,
@@ -48,6 +68,8 @@ export function exporterCsv(lignes: Participant[]) {
       ligne.nom,
       ligne.email,
       ligne.telephone ?? '',
+      libelleProfil(ligne.profil),
+      libelleDates(ligne.dates),
       ligne.organisation ?? '',
       ligne.fonction ?? '',
       LIBELLE_STATUT[ligne.statut],

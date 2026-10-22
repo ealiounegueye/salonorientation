@@ -8,6 +8,8 @@ export type FormulaireInscription = {
   telephone: string
   organisation: string
   fonction: string
+  profil: string
+  dates: string
   website: string
 }
 
@@ -27,6 +29,8 @@ export async function inscrire(formulaire: FormulaireInscription): Promise<Resul
     p_organisation: formulaire.organisation,
     p_fonction: formulaire.fonction,
     p_website: formulaire.website,
+    p_profil: formulaire.profil,
+    p_dates: formulaire.dates,
   })
 
   if (error || !data) {

@@ -9,6 +9,8 @@ type Corps = {
   telephone?: string
   organisation?: string
   fonction?: string
+  profil?: string
+  dates?: string
   website?: string
 }
 
@@ -41,6 +43,8 @@ Deno.serve(async (req) => {
   const telephone = texte(corps.telephone, 30) || null
   const organisation = texte(corps.organisation, 120) || null
   const fonction = texte(corps.fonction, 120) || null
+  const profil = texte(corps.profil, 40).toLowerCase() || null
+  const dates = texte(corps.dates, 20) || null
 
   if (prenom.length < 2 || nom.length < 2) {
     return json({ ok: false, message: 'Indiquez votre prénom et votre nom.' })
@@ -73,7 +77,7 @@ Deno.serve(async (req) => {
       return json({ ok: false, message: 'Les inscriptions sont fermées.' })
     }
 
-    const ligne = { prenom, nom, email, telephone, organisation, fonction, statut: 'inscrit' }
+    const ligne = { prenom, nom, email, telephone, organisation, fonction, profil, dates, statut: 'inscrit' }
     for (let essai = 0; essai < 5; essai += 1) {
       const { data, error } = await admin
         .from('participants')

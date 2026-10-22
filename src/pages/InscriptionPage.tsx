@@ -5,6 +5,7 @@ import { LogoSalon } from '../components/LogoSalon'
 import { inscrire, type FormulaireInscription } from '../lib/api'
 import { telechargerBadge } from '../lib/badgeImage'
 import { evenement } from '../lib/evenement'
+import { JOURS, PROFILS } from '../lib/format'
 import { isConfigured, supabase } from '../lib/supabase'
 
 const champ =
@@ -26,6 +27,8 @@ const vide: FormulaireInscription = {
   telephone: '',
   organisation: '',
   fonction: '',
+  profil: '',
+  dates: '',
   website: '',
 }
 
@@ -33,8 +36,10 @@ export function InscriptionPage() {
   const navigate = useNavigate()
   const [form, setForm] = useState(vide)
   const [ouverte, setOuverte] = useState<boolean | null>(null)
+  const [jours, setJours] = useState<string[]>([])
   const [erreur, setErreur] = useState<string | null>(null)
   const [envoi, setEnvoi] = useState(false)
+  const toutes = JOURS.every((jour) => jours.includes(jour))
 
   useEffect(() => {
     if (!isConfigured) return
@@ -49,6 +54,17 @@ export function InscriptionPage() {
 
   function chiffres(valeur: string) {
     return valeur.replace(/\D/g, '').slice(0, 15)
+  }
+
+  function basculerJour(jour: string) {
+    setJours((actuel) => {
+      const suite = actuel.includes(jour) ? actuel.filter((valeur) => valeur !== jour) : [...actuel, jour]
+      return JOURS.filter((valeur) => suite.includes(valeur))
+    })
+  }
+
+  function basculerToutes() {
+    setJours(toutes ? [] : [...JOURS])
   }
 
   async function onSubmit(event: FormEvent) {
@@ -70,6 +86,15 @@ export function InscriptionPage() {
       setErreur('Indiquez un numéro de téléphone, sans lettres.')
       return
     }
+    if (!PROFILS.some((entree) => entree.valeur === form.profil)) {
+      setErreur('Choisissez votre profil.')
+      return
+    }
+    if (jours.length === 0) {
+      setErreur('Choisissez au moins une date.')
+      return
+    }
+    const dates = jours.join(',')
     setEnvoi(true)
     const resultat = await inscrire({
       ...form,
@@ -79,6 +104,8 @@ export function InscriptionPage() {
       telephone,
       organisation: form.organisation.trim(),
       fonction: form.fonction.trim(),
+      profil: form.profil,
+      dates,
     })
     setEnvoi(false)
     if (!resultat.ok) {
@@ -100,6 +127,8 @@ export function InscriptionPage() {
         prenom,
         nom,
         telephone,
+        profil: form.profil,
+        dates,
       },
     })
   }
@@ -175,10 +204,44 @@ export function InscriptionPage() {
           />
         </label>
         <label className="block">
+          {etiquette('Vous êtes', true)}
+          <select required value={form.profil} onChange={(e) => maj('profil', e.target.value)} className={champ}>
+            <option value="">Choisir</option>
+            {PROFILS.map((entree) => (
+              <option key={entree.valeur} value={entree.valeur}>
+                {entree.libelle}
+              </option>
+            ))}
+          </select>
+        </label>
+        <fieldset>
+          <legend className="mb-1.5 block text-sm font-medium">
+            Dates <span className="text-red">*</span>
+          </legend>
+          <div className="grid grid-cols-3 gap-2">
+            {JOURS.map((jour) => (
+              <label key={jour} className="flex min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-2xl border border-line px-2 py-3 text-sm font-medium has-[:checked]:border-red has-[:checked]:bg-red/5">
+                <input
+                  type="checkbox"
+                  checked={jours.includes(jour)}
+                  onChange={() => basculerJour(jour)}
+                  className="size-4 accent-red"
+                />
+                {jour}
+              </label>
+            ))}
+          </div>
+          <label className="mt-2 flex cursor-pointer items-center gap-2 rounded-2xl border border-line px-3 py-3 text-sm font-medium has-[:checked]:border-red has-[:checked]:bg-red/5">
+            <input type="checkbox" checked={toutes} onChange={basculerToutes} className="size-4 accent-red" />
+            Toutes les dates
+          </label>
+        </fieldset>
+        <label className="block">
           {etiquette('Organisation')}
           <input autoComplete="organization" value={form.organisation} onChange={(e) => maj('organisation', e.target.value)} className={champ} />
         </label>
         <label className="block">
+          
           {etiquette('Fonction')}
           <input autoComplete="organization-title" value={form.fonction} onChange={(e) => maj('fonction', e.target.value)} className={champ} />
         </label>
