@@ -236,15 +236,6 @@ export function InscriptionPage() {
             Toutes les dates
           </label>
         </fieldset>
-        <label className="block">
-          {etiquette('Organisation')}
-          <input autoComplete="organization" value={form.organisation} onChange={(e) => maj('organisation', e.target.value)} className={champ} />
-        </label>
-        <label className="block">
-          
-          {etiquette('Fonction')}
-          <input autoComplete="organization-title" value={form.fonction} onChange={(e) => maj('fonction', e.target.value)} className={champ} />
-        </label>
         <div className="absolute h-0 w-0 overflow-hidden" aria-hidden="true">
           <label>
             Site web

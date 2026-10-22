@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { Download, ScanLine, Search, Trash2 } from 'lucide-react'
+import { Download, ScanLine, Search, Trash2, UserPlus } from 'lucide-react'
+import { AjoutParticipant } from '../components/AjoutParticipant'
 import { AppHeader } from '../components/AppHeader'
 import { ScanPresence } from '../components/ScanPresence'
 import { useAuth } from '../context/AuthContext'
-import { exporterCsv, extraireCode, filtreRecherche, formatQuand, libelleDates, libelleProfil, LIBELLE_STATUT, nomComplet } from '../lib/format'
+import { exporterCsv, extraireCode, filtreRecherche, formatQuand, JOURS, libelleDates, libelleProfil, LIBELLE_STATUT, nomComplet } from '../lib/format'
 import { supabase } from '../lib/supabase'
 import type { Participant, StatutParticipant } from '../types'
 
@@ -26,6 +27,8 @@ export function AdminPage() {
   const [recherche, setRecherche] = useState('')
   const [saisie, setSaisie] = useState('')
   const [filtre, setFiltre] = useState<(typeof FILTRES)[number]['id']>('tous')
+  const [jour, setJour] = useState<'toutes' | (typeof JOURS)[number]>('toutes')
+  const [ajout, setAjout] = useState(false)
   const [page, setPage] = useState(0)
   const [code, setCode] = useState('')
   const [flash, setFlash] = useState<string | null>(null)
@@ -43,6 +46,7 @@ export function AdminPage() {
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
     if (filtre !== 'tous') liste = liste.eq('statut', filtre)
+    if (jour !== 'toutes') liste = liste.ilike('dates', `%${jour}%`)
     if (filtreTexte) liste = liste.or(filtreTexte)
 
     const [pageRes, volumeRes, presentsRes, campagneRes] = await Promise.all([
@@ -56,7 +60,7 @@ export function AdminPage() {
     setVolume(volumeRes.count ?? 0)
     setPresents(presentsRes.count ?? 0)
     if (campagneRes.data) setOuverts(Boolean(campagneRes.data.ouverte))
-  }, [filtre, page, recherche])
+  }, [filtre, jour, page, recherche])
 
   useEffect(() => {
     if (configured) void charger()
@@ -167,6 +171,7 @@ export function AdminPage() {
     for (let from = 0; from < 20000; from += 1000) {
       let requete = supabase.from('participants').select('*').order('created_at', { ascending: false })
       if (filtre !== 'tous') requete = requete.eq('statut', filtre)
+      if (jour !== 'toutes') requete = requete.ilike('dates', `%${jour}%`)
       if (filtreTexte) requete = requete.or(filtreTexte)
       const { data, error } = await requete.range(from, from + 999)
       if (error || !data?.length) break
@@ -254,7 +259,7 @@ export function AdminPage() {
               <input
                 value={saisie}
                 onChange={(event) => setSaisie(event.target.value)}
-                placeholder="Nom, e-mail, code, organisation"
+                placeholder="Nom, e-mail, code"
                 className="w-full rounded-full border border-line bg-paper py-2.5 pr-4 pl-9 outline-none ring-red/20 focus:ring-4"
               />
             </div>
@@ -278,6 +283,14 @@ export function AdminPage() {
               ))}
               <button
                 type="button"
+                onClick={() => setAjout((ouvert) => !ouvert)}
+                className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-sm font-medium hover:border-red/40"
+              >
+                <UserPlus className="size-4" />
+                Ajouter
+              </button>
+              <button
+                type="button"
                 onClick={() => void exporter()}
                 disabled={exportEnCours}
                 className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-sm font-medium hover:border-red/40 disabled:opacity-60"
@@ -287,6 +300,45 @@ export function AdminPage() {
               </button>
             </div>
           </div>
+          <div className="flex flex-wrap gap-2 border-b border-line px-4 py-3">
+            <span className="self-center text-xs font-semibold uppercase tracking-[0.14em] text-muted">Date</span>
+            <button
+              type="button"
+              onClick={() => {
+                setPage(0)
+                setJour('toutes')
+              }}
+              className={
+                jour === 'toutes'
+                  ? 'rounded-full bg-ink px-3 py-1.5 text-sm font-medium text-white'
+                  : 'rounded-full border border-line px-3 py-1.5 text-sm font-medium'
+              }
+            >
+              Toutes
+            </button>
+            {JOURS.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => {
+                  setPage(0)
+                  setJour(item)
+                }}
+                className={
+                  jour === item
+                    ? 'rounded-full bg-ink px-3 py-1.5 text-sm font-medium text-white'
+                    : 'rounded-full border border-line px-3 py-1.5 text-sm font-medium'
+                }
+              >
+                {item} nov.
+              </button>
+            ))}
+          </div>
+          {ajout && (
+            <div className="border-b border-line p-4">
+              <AjoutParticipant onCree={() => void charger()} />
+            </div>
+          )}
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-sm">

@@ -219,7 +219,7 @@ begin
   end if;
 
   select coalesce((select ouverte from public.campagne where id = 1), false) into v_ouverte;
-  if not v_ouverte then
+  if not v_ouverte and not public.is_admin() then
     return jsonb_build_object('ok', false, 'message', 'Les inscriptions sont fermées.');
   end if;
 

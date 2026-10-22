@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { BandeauAuchan } from '../components/BandeauAuchan'
 import { LogoSalon } from '../components/LogoSalon'
+import { InfosLieu } from '../components/InfosLieu'
 import { QrBadge } from '../components/QrBadge'
 import { telechargerBadge } from '../lib/badgeImage'
 import { evenement } from '../lib/evenement'
@@ -93,6 +94,7 @@ export function ConfirmationPage() {
       {codeAffiche && (
         <div className="mt-8 flex flex-col items-center rounded-2xl border border-line bg-card p-6 text-center shadow-[0_16px_40px_rgba(224,0,26,0.08)]">
           <QrBadge value={codeAffiche} />
+          <InfosLieu className="mt-3 max-w-xs" />
           <p className="mt-4 text-2xl font-semibold tracking-[0.18em]">{codeAffiche}</p>
           {nomAffiche && <p className="mt-2 text-lg">{nomAffiche}</p>}
           <p className="mt-4 text-sm font-medium text-ink">

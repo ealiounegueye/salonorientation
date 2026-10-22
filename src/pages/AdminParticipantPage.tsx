@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AppHeader } from '../components/AppHeader'
+import { InfosLieu } from '../components/InfosLieu'
 import { QrBadge } from '../components/QrBadge'
 import { renvoyerBadge } from '../lib/api'
 import { formatQuand, libelleDates, libelleProfil, LIBELLE_STATUT, nomComplet } from '../lib/format'
@@ -83,7 +84,10 @@ export function AdminParticipantPage() {
 
         {participant && (
           <div className="mt-4 grid gap-4 rounded-2xl border border-line bg-white p-6 sm:grid-cols-[auto_1fr]">
-            <QrBadge value={participant.code} />
+            <div>
+              <QrBadge value={participant.code} />
+              <InfosLieu className="mt-3 max-w-56" />
+            </div>
             <div>
               <p className="text-sm font-semibold tracking-[0.18em] text-red">{participant.code}</p>
               <h2 className="mt-1 text-2xl font-semibold">{nomComplet(participant)}</h2>
@@ -104,14 +108,18 @@ export function AdminParticipantPage() {
                   <dt className="inline text-muted">Dates : </dt>
                   <dd className="inline">{libelleDates(participant.dates) || '—'}</dd>
                 </div>
-                <div>
-                  <dt className="inline text-muted">Organisation : </dt>
-                  <dd className="inline">{participant.organisation || '—'}</dd>
-                </div>
-                <div>
-                  <dt className="inline text-muted">Fonction : </dt>
-                  <dd className="inline">{participant.fonction || '—'}</dd>
-                </div>
+                {participant.organisation && (
+                  <div>
+                    <dt className="inline text-muted">Organisation : </dt>
+                    <dd className="inline">{participant.organisation}</dd>
+                  </div>
+                )}
+                {participant.fonction && (
+                  <div>
+                    <dt className="inline text-muted">Fonction : </dt>
+                    <dd className="inline">{participant.fonction}</dd>
+                  </div>
+                )}
                 <div>
                   <dt className="inline text-muted">Statut : </dt>
                   <dd className="inline">{LIBELLE_STATUT[participant.statut]}</dd>
