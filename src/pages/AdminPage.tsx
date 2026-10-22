@@ -5,7 +5,8 @@ import { AjoutParticipant } from '../components/AjoutParticipant'
 import { AppHeader } from '../components/AppHeader'
 import { ScanPresence } from '../components/ScanPresence'
 import { useAuth } from '../context/AuthContext'
-import { exporterCsv, extraireCode, filtreRecherche, formatQuand, JOURS, libelleDates, libelleProfil, LIBELLE_STATUT, nomComplet } from '../lib/format'
+import { exporterCsv, extraireCode, filtreRecherche, formatQuand, JOURS, libelleDates, libelleProfil, LIBELLE_STATUT, nomComplet, PROFILS } from '../lib/format'
+import { lireParametres } from '../lib/parametres'
 import { supabase } from '../lib/supabase'
 import type { Participant, StatutParticipant } from '../types'
 
@@ -14,7 +15,6 @@ const FILTRES: Array<{ id: 'tous' | StatutParticipant; label: string }> = [
   { id: 'tous', label: 'Tous' },
   { id: 'inscrit', label: 'Inscrits' },
   { id: 'present', label: 'Présents' },
-  { id: 'annule', label: 'Annulés' },
 ]
 
 export function AdminPage() {
@@ -27,7 +27,10 @@ export function AdminPage() {
   const [recherche, setRecherche] = useState('')
   const [saisie, setSaisie] = useState('')
   const [filtre, setFiltre] = useState<(typeof FILTRES)[number]['id']>('tous')
-  const [jour, setJour] = useState<'toutes' | (typeof JOURS)[number]>('toutes')
+  const [joursDispo, setJoursDispo] = useState<string[]>([...JOURS])
+  const [jour, setJour] = useState('toutes')
+  const [profil, setProfil] = useState('tous')
+  const [listeEnCours, setListeEnCours] = useState(false)
   const [ajout, setAjout] = useState(false)
   const [page, setPage] = useState(0)
   const [code, setCode] = useState('')
@@ -36,31 +39,47 @@ export function AdminPage() {
   const [exportEnCours, setExportEnCours] = useState(false)
   const [camera, setCamera] = useState(false)
   const recents = useRef(new Map<string, number>())
+  const requeteListe = useRef(0)
   const son = useRef<AudioContext | null>(null)
   const flashTimer = useRef<number | null>(null)
 
+  const chargerStats = useCallback(async () => {
+    const [volumeRes, presentsRes, campagneRes, salon] = await Promise.all([
+      supabase.from('participants').select('*', { count: 'exact', head: true }),
+      supabase.from('participants').select('*', { count: 'exact', head: true }).eq('statut', 'present'),
+      supabase.from('campagne').select('ouverte').eq('id', 1).maybeSingle(),
+      lireParametres(true),
+    ])
+    setVolume(volumeRes.count ?? 0)
+    setPresents(presentsRes.count ?? 0)
+    if (campagneRes.data) setOuverts(Boolean(campagneRes.data.ouverte))
+    setJoursDispo(salon.jours)
+  }, [])
+
   const charger = useCallback(async () => {
+    const ticket = ++requeteListe.current
+    setListeEnCours(true)
     const filtreTexte = filtreRecherche(recherche)
     let liste = supabase
       .from('participants')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
     if (filtre !== 'tous') liste = liste.eq('statut', filtre)
-    if (jour !== 'toutes') liste = liste.ilike('dates', `%${jour}%`)
+    if (profil !== 'tous') liste = liste.eq('profil', profil)
+    if (jour !== 'toutes') liste = liste.contains('jours_sel', [jour])
     if (filtreTexte) liste = liste.or(filtreTexte)
 
-    const [pageRes, volumeRes, presentsRes, campagneRes] = await Promise.all([
-      liste.range(page * PAGE, page * PAGE + PAGE - 1),
-      supabase.from('participants').select('*', { count: 'exact', head: true }),
-      supabase.from('participants').select('*', { count: 'exact', head: true }).eq('statut', 'present'),
-      supabase.from('campagne').select('ouverte').eq('id', 1).maybeSingle(),
-    ])
-    setLignes((pageRes.data ?? []) as Participant[])
-    setTotal(pageRes.count ?? 0)
-    setVolume(volumeRes.count ?? 0)
-    setPresents(presentsRes.count ?? 0)
-    if (campagneRes.data) setOuverts(Boolean(campagneRes.data.ouverte))
-  }, [filtre, jour, page, recherche])
+    const { data, count } = await liste.range(page * PAGE, page * PAGE + PAGE - 1)
+    if (ticket !== requeteListe.current) return
+    setLignes((data ?? []) as Participant[])
+    setTotal(count ?? 0)
+    setListeEnCours(false)
+  }, [filtre, jour, page, profil, recherche])
+
+  useEffect(() => {
+    if (!configured) return
+    void chargerStats()
+  }, [chargerStats, configured])
 
   useEffect(() => {
     if (configured) void charger()
@@ -171,7 +190,8 @@ export function AdminPage() {
     for (let from = 0; from < 20000; from += 1000) {
       let requete = supabase.from('participants').select('*').order('created_at', { ascending: false })
       if (filtre !== 'tous') requete = requete.eq('statut', filtre)
-      if (jour !== 'toutes') requete = requete.ilike('dates', `%${jour}%`)
+      if (profil !== 'tous') requete = requete.eq('profil', profil)
+      if (jour !== 'toutes') requete = requete.contains('jours_sel', [jour])
       if (filtreTexte) requete = requete.or(filtreTexte)
       const { data, error } = await requete.range(from, from + 999)
       if (error || !data?.length) break
@@ -316,7 +336,7 @@ export function AdminPage() {
             >
               Toutes
             </button>
-            {JOURS.map((item) => (
+            {joursDispo.map((item) => (
               <button
                 key={item}
                 type="button"
@@ -330,17 +350,56 @@ export function AdminPage() {
                     : 'rounded-full border border-line px-3 py-1.5 text-sm font-medium'
                 }
               >
-                {item} nov.
+                {item}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2 border-b border-line px-4 py-3">
+            <span className="self-center text-xs font-semibold uppercase tracking-[0.14em] text-muted">Profil</span>
+            <button
+              type="button"
+              onClick={() => {
+                setPage(0)
+                setProfil('tous')
+              }}
+              className={
+                profil === 'tous'
+                  ? 'rounded-full bg-ink px-3 py-1.5 text-sm font-medium text-white'
+                  : 'rounded-full border border-line px-3 py-1.5 text-sm font-medium'
+              }
+            >
+              Tous
+            </button>
+            {PROFILS.map((entree) => (
+              <button
+                key={entree.valeur}
+                type="button"
+                onClick={() => {
+                  setPage(0)
+                  setProfil(entree.valeur)
+                }}
+                className={
+                  profil === entree.valeur
+                    ? 'rounded-full bg-ink px-3 py-1.5 text-sm font-medium text-white'
+                    : 'rounded-full border border-line px-3 py-1.5 text-sm font-medium'
+                }
+              >
+                {entree.libelle}
               </button>
             ))}
           </div>
           {ajout && (
             <div className="border-b border-line p-4">
-              <AjoutParticipant onCree={() => void charger()} />
+              <AjoutParticipant
+                onCree={() => {
+                  void charger()
+                  void chargerStats()
+                }}
+              />
             </div>
           )}
 
-          <div className="overflow-x-auto">
+          <div className={`overflow-x-auto ${listeEnCours ? 'opacity-60' : ''}`}>
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="text-xs uppercase tracking-[0.14em] text-muted">
                 <tr>
@@ -365,7 +424,7 @@ export function AdminPage() {
                     <td className="px-4 py-3">
                       <p className="font-medium">{nomComplet(ligne)}</p>
                       <p className="text-muted">
-                        {[libelleProfil(ligne.profil), libelleDates(ligne.dates)].filter(Boolean).join(' · ') ||
+                        {[libelleProfil(ligne.profil), libelleDates(ligne.dates, joursDispo)].filter(Boolean).join(' · ') ||
                           ligne.organisation ||
                           ligne.fonction ||
                           '—'}

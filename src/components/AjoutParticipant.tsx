@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { inscrire } from '../lib/api'
 import { JOURS, PROFILS } from '../lib/format'
+import { lireParametres } from '../lib/parametres'
 
 const champ =
   'w-full rounded-2xl border border-line bg-paper px-4 py-3 outline-none ring-red/20 focus:ring-4'
@@ -11,16 +12,21 @@ export function AjoutParticipant({ onCree }: { onCree: () => void }) {
   const [email, setEmail] = useState('')
   const [telephone, setTelephone] = useState('')
   const [profil, setProfil] = useState('')
+  const [joursDispo, setJoursDispo] = useState<string[]>([...JOURS])
   const [jours, setJours] = useState<string[]>([])
   const [message, setMessage] = useState<string | null>(null)
   const [ok, setOk] = useState(false)
   const [envoi, setEnvoi] = useState(false)
-  const toutes = JOURS.every((jour) => jours.includes(jour))
+  const toutes = joursDispo.length > 0 && joursDispo.every((jour) => jours.includes(jour))
+
+  useEffect(() => {
+    void lireParametres().then((salon) => setJoursDispo(salon.jours))
+  }, [])
 
   function basculerJour(jour: string) {
     setJours((actuel) => {
       const suite = actuel.includes(jour) ? actuel.filter((valeur) => valeur !== jour) : [...actuel, jour]
-      return JOURS.filter((valeur) => suite.includes(valeur))
+      return joursDispo.filter((valeur) => suite.includes(valeur))
     })
   }
 
@@ -112,17 +118,17 @@ export function AjoutParticipant({ onCree }: { onCree: () => void }) {
       <fieldset className="sm:col-span-2">
         <legend className="mb-1.5 text-sm font-medium">Dates</legend>
         <div className="flex flex-wrap gap-2">
-          {JOURS.map((jour) => (
+          {joursDispo.map((jour) => (
             <label key={jour} className="flex cursor-pointer items-center gap-2 rounded-full border border-line px-3 py-2 text-sm has-[:checked]:border-red has-[:checked]:bg-red/5">
               <input type="checkbox" checked={jours.includes(jour)} onChange={() => basculerJour(jour)} className="size-4 accent-red" />
-              {jour} nov.
+              {jour}
             </label>
           ))}
           <label className="flex cursor-pointer items-center gap-2 rounded-full border border-line px-3 py-2 text-sm has-[:checked]:border-red has-[:checked]:bg-red/5">
             <input
               type="checkbox"
               checked={toutes}
-              onChange={() => setJours(toutes ? [] : [...JOURS])}
+              onChange={() => setJours(toutes ? [] : [...joursDispo])}
               className="size-4 accent-red"
             />
             Toutes les dates

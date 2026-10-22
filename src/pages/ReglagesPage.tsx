@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { AppHeader } from '../components/AppHeader'
 import { useAuth } from '../context/AuthContext'
 import { gererEquipe } from '../lib/api'
+import { lireParametres, normaliserJours } from '../lib/parametres'
 import { supabase } from '../lib/supabase'
 import type { Profile } from '../types'
 
@@ -11,6 +12,10 @@ const champ =
 export function ReglagesPage() {
   const { profile, session } = useAuth()
   const [ouverte, setOuverte] = useState(true)
+  const [lieu, setLieu] = useState('')
+  const [horaires, setHoraires] = useState('')
+  const [periode, setPeriode] = useState('')
+  const [joursTexte, setJoursTexte] = useState('')
   const [equipe, setEquipe] = useState<Profile[]>([])
   const [nom, setNom] = useState('')
   const [email, setEmail] = useState('')
@@ -22,10 +27,17 @@ export function ReglagesPage() {
 
   const charger = useCallback(async () => {
     const [campagneRes, equipeRes] = await Promise.all([
-      supabase.from('campagne').select('ouverte').eq('id', 1).maybeSingle(),
+      supabase.from('campagne').select('ouverte, lieu, horaires, periode, jours').eq('id', 1).maybeSingle(),
       supabase.from('profiles').select('*').order('created_at', { ascending: true }),
     ])
-    if (campagneRes.data) setOuverte(Boolean(campagneRes.data.ouverte))
+    if (campagneRes.data) {
+      const salon = campagneRes.data
+      setOuverte(Boolean(salon.ouverte))
+      setLieu(String(salon.lieu ?? ''))
+      setHoraires(String(salon.horaires ?? ''))
+      setPeriode(String(salon.periode ?? ''))
+      setJoursTexte(normaliserJours(String(salon.jours ?? '')).join(', '))
+    }
     setEquipe((equipeRes.data ?? []) as Profile[])
   }, [])
 
@@ -47,6 +59,33 @@ export function ReglagesPage() {
     }
     setOuverte(suivante)
     signaler(true, suivante ? 'Les inscriptions sont ouvertes.' : 'Les inscriptions sont arrêtées.')
+  }
+
+  async function enregistrerSalon(event: FormEvent) {
+    event.preventDefault()
+    const jours = normaliserJours(joursTexte)
+    if (jours.length === 0 || !lieu.trim() || !horaires.trim()) {
+      signaler(false, 'Indiquez le lieu, les horaires et au moins un jour.')
+      return
+    }
+    setEnvoi(true)
+    const { error } = await supabase
+      .from('campagne')
+      .update({
+        lieu: lieu.trim(),
+        horaires: horaires.trim(),
+        periode: periode.trim(),
+        jours: jours.join(','),
+      })
+      .eq('id', 1)
+    setEnvoi(false)
+    if (error) {
+      signaler(false, 'Les paramètres n’ont pas été enregistrés.')
+      return
+    }
+    setJoursTexte(jours.join(', '))
+    await lireParametres(true)
+    signaler(true, 'Le formulaire utilise ces dates.')
   }
 
   async function creerCompte(event: FormEvent) {
@@ -117,6 +156,38 @@ export function ReglagesPage() {
               ? 'Le formulaire public est visible.'
               : 'Le formulaire public est masqué.'}
           </p>
+        </section>
+
+        <section className="rounded-2xl border border-line bg-white p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Salon</p>
+          <p className="mt-2 text-sm text-muted">
+            Ces informations s’affichent sous le QR code et déterminent les dates du formulaire.
+          </p>
+          <form onSubmit={(event) => void enregistrerSalon(event)} className="mt-4 space-y-3">
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium">Lieu</span>
+              <input required value={lieu} onChange={(event) => setLieu(event.target.value)} className={champ} />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium">Horaires</span>
+              <input required value={horaires} onChange={(event) => setHoraires(event.target.value)} className={champ} />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium">Période</span>
+              <input required value={periode} onChange={(event) => setPeriode(event.target.value)} placeholder="novembre 2026" className={champ} />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium">Jours proposés</span>
+              <input required value={joursTexte} onChange={(event) => setJoursTexte(event.target.value)} placeholder="18, 19, 20" className={champ} />
+            </label>
+            <button
+              type="submit"
+              disabled={envoi}
+              className="rounded-full bg-red px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-dark disabled:opacity-60"
+            >
+              Enregistrer
+            </button>
+          </form>
         </section>
 
         <section className="rounded-2xl border border-line bg-white p-5">

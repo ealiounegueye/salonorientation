@@ -17,7 +17,11 @@ create table if not exists public.profiles (
 
 create table if not exists public.campagne (
   id int primary key default 1 check (id = 1),
-  ouverte boolean not null default true
+  ouverte boolean not null default true,
+  lieu text not null default 'À côté du Cinéma Pathé à Mermoz',
+  horaires text not null default '9h–17h',
+  periode text not null default 'novembre 2026',
+  jours text not null default '18,19,20'
 );
 
 create table if not exists public.participants (
@@ -40,6 +44,11 @@ insert into public.campagne (id, ouverte)
 values (1, true)
 on conflict (id) do nothing;
 
+alter table public.campagne add column if not exists lieu text not null default 'À côté du Cinéma Pathé à Mermoz';
+alter table public.campagne add column if not exists horaires text not null default '9h–17h';
+alter table public.campagne add column if not exists periode text not null default 'novembre 2026';
+alter table public.campagne add column if not exists jours text not null default '18,19,20';
+
 create unique index if not exists participants_email_lower_idx
   on public.participants (lower(email));
 
@@ -48,6 +57,21 @@ create index if not exists participants_created_idx
 
 create index if not exists participants_statut_idx
   on public.participants (statut);
+
+alter table public.participants
+  add column if not exists jours_sel text[]
+  generated always as (
+    case
+      when dates is null or btrim(dates) = '' then '{}'::text[]
+      else string_to_array(dates, ',')
+    end
+  ) stored;
+
+create index if not exists participants_jours_sel_idx
+  on public.participants using gin (jours_sel);
+
+create index if not exists participants_profil_idx
+  on public.participants (profil);
 
 alter table public.participants add column if not exists profil text;
 alter table public.participants add column if not exists dates text;
@@ -127,8 +151,29 @@ as $$
   limit 1;
 $$;
 
+create or replace function public.parametres_publics()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'ouverte', ouverte,
+    'lieu', lieu,
+    'horaires', horaires,
+    'periode', periode,
+    'jours', jours
+  )
+  from public.campagne
+  where id = 1;
+$$;
+
 revoke all on function public.inscriptions_ouvertes() from public, anon, authenticated;
 grant execute on function public.inscriptions_ouvertes() to anon, authenticated;
+
+revoke all on function public.parametres_publics() from public, anon, authenticated;
+grant execute on function public.parametres_publics() to anon, authenticated;
 
 revoke all on function public.badge_public(text) from public, anon, authenticated;
 grant execute on function public.badge_public(text) to anon, authenticated;
@@ -167,6 +212,7 @@ declare
   v_profil text := lower(left(btrim(coalesce(p_profil, '')), 40));
   v_brut_dates text := regexp_replace(coalesce(p_dates, ''), '[^0-9,]', '', 'g');
   v_dates text;
+  v_autorises text;
   v_ouverte boolean;
   v_row public.participants;
   v_code text;
@@ -195,12 +241,15 @@ begin
     return jsonb_build_object('ok', false, 'message', 'Choisissez votre profil.');
   end if;
 
-  v_dates := nullif(concat_ws(
-    ',',
-    case when v_brut_dates ~ '(^|,)18(,|$)' then '18' else null end,
-    case when v_brut_dates ~ '(^|,)19(,|$)' then '19' else null end,
-    case when v_brut_dates ~ '(^|,)20(,|$)' then '20' else null end
-  ), '');
+  select coalesce(jours, '') into v_autorises from public.campagne where id = 1;
+  select nullif(string_agg(jour, ',' order by ord), '')
+    into v_dates
+  from (
+    select btrim(u.jour) as jour, u.ord
+    from unnest(string_to_array(v_autorises, ',')) with ordinality as u(jour, ord)
+    where btrim(u.jour) <> ''
+      and v_brut_dates ~ ('(^|,)' || btrim(u.jour) || '(,|$)')
+  ) choisi;
 
   if v_dates is null then
     return jsonb_build_object('ok', false, 'message', 'Choisissez au moins une date.');

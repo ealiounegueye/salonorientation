@@ -6,7 +6,8 @@ import { inscrire, type FormulaireInscription } from '../lib/api'
 import { telechargerBadge } from '../lib/badgeImage'
 import { evenement } from '../lib/evenement'
 import { JOURS, PROFILS } from '../lib/format'
-import { isConfigured, supabase } from '../lib/supabase'
+import { lireParametres } from '../lib/parametres'
+import { isConfigured } from '../lib/supabase'
 
 const champ =
   'w-full rounded-2xl border border-line bg-white px-4 py-3.5 outline-none ring-red/20 placeholder:text-muted/70 focus:border-red/40 focus:ring-4'
@@ -36,15 +37,17 @@ export function InscriptionPage() {
   const navigate = useNavigate()
   const [form, setForm] = useState(vide)
   const [ouverte, setOuverte] = useState<boolean | null>(null)
+  const [joursDispo, setJoursDispo] = useState<string[]>([...JOURS])
   const [jours, setJours] = useState<string[]>([])
   const [erreur, setErreur] = useState<string | null>(null)
   const [envoi, setEnvoi] = useState(false)
-  const toutes = JOURS.every((jour) => jours.includes(jour))
+  const toutes = joursDispo.length > 0 && joursDispo.every((jour) => jours.includes(jour))
 
   useEffect(() => {
     if (!isConfigured) return
-    void supabase.rpc('inscriptions_ouvertes').then(({ data, error }) => {
-      setOuverte(error ? null : Boolean(data))
+    void lireParametres().then((salon) => {
+      setOuverte(salon.ouverte)
+      setJoursDispo(salon.jours)
     })
   }, [])
 
@@ -59,12 +62,12 @@ export function InscriptionPage() {
   function basculerJour(jour: string) {
     setJours((actuel) => {
       const suite = actuel.includes(jour) ? actuel.filter((valeur) => valeur !== jour) : [...actuel, jour]
-      return JOURS.filter((valeur) => suite.includes(valeur))
+      return joursDispo.filter((valeur) => suite.includes(valeur))
     })
   }
 
   function basculerToutes() {
-    setJours(toutes ? [] : [...JOURS])
+    setJours(toutes ? [] : [...joursDispo])
   }
 
   async function onSubmit(event: FormEvent) {
@@ -137,9 +140,9 @@ export function InscriptionPage() {
 
   return (
     <BandeauAuchan fond="bg-[linear-gradient(180deg,#ffffff_0%,#fff6f6_46%,#f4fbf7_100%)]">
-      <header className="text-center">
-        <h1 className="flex justify-center">
-          <LogoSalon className="h-auto w-full max-w-[18.5rem] sm:max-w-[22rem]" />
+      <header className="w-full min-w-0 text-center">
+        <h1 className="w-full min-w-0">
+          <LogoSalon className="mx-auto block h-auto w-full" />
         </h1>
         <div className="mx-auto mt-4 flex h-1 w-24 overflow-hidden rounded-full" aria-hidden="true">
           <span className="w-2/3 bg-red" />
@@ -148,7 +151,7 @@ export function InscriptionPage() {
         <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.28em] text-red sm:text-[12px]">
           {evenement.organisation}
         </p>
-        <p className="mt-3 whitespace-nowrap text-xs font-semibold tracking-tight text-ink sm:text-sm">
+        <p className="mt-3 text-xs font-semibold tracking-tight text-ink sm:whitespace-nowrap sm:text-sm">
           {evenement.accroche}
         </p>
       </header>
@@ -219,7 +222,7 @@ export function InscriptionPage() {
             Dates <span className="text-red">*</span>
           </legend>
           <div className="grid grid-cols-3 gap-2">
-            {JOURS.map((jour) => (
+            {joursDispo.map((jour) => (
               <label key={jour} className="flex min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-2xl border border-line px-2 py-3 text-sm font-medium has-[:checked]:border-red has-[:checked]:bg-red/5">
                 <input
                   type="checkbox"

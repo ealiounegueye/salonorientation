@@ -13,10 +13,10 @@ export function libelleProfil(profil: string | null | undefined) {
   return PROFILS.find((entree) => entree.valeur === profil)?.libelle ?? ''
 }
 
-export function libelleDates(dates: string | null | undefined) {
+export function libelleDates(dates: string | null | undefined, tousLesJours: readonly string[] = JOURS) {
   if (!dates) return ''
   const jours = dates.split(',').map((jour) => jour.trim()).filter(Boolean)
-  if (JOURS.every((jour) => jours.includes(jour))) return 'Toutes les dates'
+  if (tousLesJours.length > 0 && tousLesJours.every((jour) => jours.includes(jour))) return 'Toutes les dates'
   return jours.join(', ')
 }
 

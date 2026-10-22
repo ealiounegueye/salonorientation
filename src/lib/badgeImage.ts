@@ -1,5 +1,5 @@
 import QRCode from 'qrcode'
-import { evenement } from './evenement'
+import { apercuDates, lireParametres } from './parametres'
 
 function chargerImage(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
@@ -17,6 +17,7 @@ export async function telechargerBadge(opts: { code: string; prenom: string; nom
     errorCorrectionLevel: 'M',
     color: { dark: '#1a1a1a', light: '#ffffff' },
   })
+  const salon = await lireParametres()
   const image = await chargerImage(dataUrl)
   const canvas = document.createElement('canvas')
   canvas.width = 800
@@ -44,8 +45,8 @@ export async function telechargerBadge(opts: { code: string; prenom: string; nom
   }
   ctx.fillStyle = '#6b6b6b'
   ctx.font = '500 18px Figtree, sans-serif'
-  ctx.fillText(evenement.lieu, 400, 956)
-  ctx.fillText(`${evenement.dates}  ·  ${evenement.horaires}`, 400, 986)
+  ctx.fillText(salon.lieu, 400, 956)
+  ctx.fillText(`${apercuDates(salon)}  ·  ${salon.horaires}`, 400, 986)
 
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
   if (!blob) return
