@@ -10,7 +10,7 @@ import { lireParametres } from '../lib/parametres'
 import { supabase } from '../lib/supabase'
 import type { Participant, StatutParticipant } from '../types'
 
-const PAGE = 50
+const PAGE = 10
 const FILTRES: Array<{ id: 'tous' | StatutParticipant; label: string }> = [
   { id: 'tous', label: 'Tous' },
   { id: 'inscrit', label: 'Inscrits' },

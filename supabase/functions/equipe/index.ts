@@ -58,6 +58,37 @@ Deno.serve(async (req) => {
     return json({ ok: true, message: `${nom} peut se connecter.` })
   }
 
+  if (corps.action === 'modifier') {
+    const id = texte(corps.id, 40)
+    const nom = texte(corps.nom, 80)
+    const email = texte(corps.email, 160).toLowerCase()
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ ok: false, message: 'Compte introuvable.' })
+    if (nom.length < 2) return json({ ok: false, message: 'Indiquez le nom de la personne.' })
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ ok: false, message: 'Indiquez un e-mail valide.' })
+
+    const { error } = await admin.auth.admin.updateUserById(id, {
+      email,
+      email_confirm: true,
+      user_metadata: { nom },
+    })
+    if (error) {
+      const deja = /already|exists|registered/i.test(error.message)
+      return json({ ok: false, message: deja ? 'Cet e-mail est déjà utilisé.' : 'Le compte n’a pas pu être modifié.' })
+    }
+    await admin.from('profiles').update({ nom, email }).eq('id', id)
+    return json({ ok: true, message: 'Compte modifié.' })
+  }
+
+  if (corps.action === 'reinitialiser') {
+    const id = texte(corps.id, 40)
+    const password = String(corps.password ?? '')
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ ok: false, message: 'Compte introuvable.' })
+    if (password.length < 8) return json({ ok: false, message: 'Le mot de passe doit contenir au moins 8 caractères.' })
+    const { error } = await admin.auth.admin.updateUserById(id, { password })
+    if (error) return json({ ok: false, message: 'Le mot de passe n’a pas été réinitialisé.' })
+    return json({ ok: true, message: 'Mot de passe réinitialisé.' })
+  }
+
   if (corps.action === 'retirer') {
     const id = texte(corps.id, 40)
     if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ ok: false, message: 'Compte introuvable.' })

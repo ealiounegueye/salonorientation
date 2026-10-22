@@ -59,7 +59,11 @@ export async function inscrire(formulaire: FormulaireInscription): Promise<Resul
 }
 
 export async function gererEquipe(
-  corps: { action: 'creer'; nom: string; email: string; password: string } | { action: 'retirer'; id: string },
+  corps:
+    | { action: 'creer'; nom: string; email: string; password: string }
+    | { action: 'modifier'; id: string; nom: string; email: string }
+    | { action: 'reinitialiser'; id: string; password: string }
+    | { action: 'retirer'; id: string },
 ): Promise<{ ok: boolean; message: string }> {
   const { data, error } = await supabase.functions.invoke('equipe', { body: corps })
   const reponse = data as { ok?: boolean; message?: string } | null
