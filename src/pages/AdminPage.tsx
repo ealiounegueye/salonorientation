@@ -6,6 +6,7 @@ import { AppHeader } from '../components/AppHeader'
 import { ScanPresence } from '../components/ScanPresence'
 import { useAuth } from '../context/AuthContext'
 import { exporterCsv, extraireCode, filtreRecherche, formatQuand, JOURS, libelleDates, libelleProfil, LIBELLE_STATUT, nomComplet, PROFILS } from '../lib/format'
+import { demanderAccesCamera } from '../lib/camera'
 import { lireParametres } from '../lib/parametres'
 import { supabase } from '../lib/supabase'
 import type { Participant, StatutParticipant } from '../types'
@@ -38,6 +39,7 @@ export function AdminPage() {
   const [flashOk, setFlashOk] = useState(true)
   const [exportEnCours, setExportEnCours] = useState(false)
   const [camera, setCamera] = useState(false)
+  const [demandeCamera, setDemandeCamera] = useState(false)
   const recents = useRef(new Map<string, number>())
   const requeteListe = useRef(0)
   const son = useRef<AudioContext | null>(null)
@@ -211,14 +213,27 @@ export function AdminPage() {
         <section className="rounded-2xl border border-line bg-white p-4">
           <button
             type="button"
+            disabled={demandeCamera}
             onClick={() => {
               preparerSon()
-              setCamera((ouvert) => !ouvert)
+              if (camera) {
+                setCamera(false)
+                return
+              }
+              setDemandeCamera(true)
+              void demanderAccesCamera().then((acces) => {
+                setDemandeCamera(false)
+                if (!acces.ok) {
+                  signaler(false, acces.message)
+                  return
+                }
+                setCamera(true)
+              })
             }}
-            className="flex w-full items-center justify-center gap-3 rounded-2xl bg-red py-5 text-lg font-semibold text-white hover:bg-red-dark"
+            className="flex w-full items-center justify-center gap-3 rounded-2xl bg-red py-5 text-lg font-semibold text-white hover:bg-red-dark disabled:opacity-70"
           >
             <ScanLine className="size-6" />
-            {camera ? 'Arrêter le scan' : 'Scanner un QR code'}
+            {demandeCamera ? 'Autorisation caméra…' : camera ? 'Arrêter le scan' : 'Scanner un QR code'}
           </button>
           <ScanPresence actif={camera} onCode={(valeur) => void marquerPresent(valeur)} />
           {flash && (
