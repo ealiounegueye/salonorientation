@@ -1,4 +1,4 @@
-import type { Participant, ProfilParticipant, StatutParticipant } from '../types'
+import type { ProfilParticipant, StatutParticipant } from '../types'
 
 export const JOURS = ['18', '19', '20'] as const
 
@@ -59,32 +59,3 @@ export function filtreRecherche(saisie: string) {
   ].join(',')
 }
 
-export function exporterCsv(lignes: Participant[]) {
-  const entete = ['Code', 'Prénom', 'Nom', 'E-mail', 'Téléphone', 'Profil', 'Dates', 'Organisation', 'Fonction', 'Statut', 'Inscrit le']
-  const corps = lignes.map((ligne) =>
-    [
-      ligne.code,
-      ligne.prenom,
-      ligne.nom,
-      ligne.email,
-      ligne.telephone ?? '',
-      libelleProfil(ligne.profil),
-      libelleDates(ligne.dates),
-      ligne.organisation ?? '',
-      ligne.fonction ?? '',
-      LIBELLE_STATUT[ligne.statut],
-      formatQuand(ligne.created_at),
-    ]
-      .map((valeur) => `"${String(valeur).replaceAll('"', '""')}"`)
-      .join(';'),
-  )
-  const blob = new Blob([`\uFEFF${[entete.join(';'), ...corps].join('\n')}`], {
-    type: 'text/csv;charset=utf-8',
-  })
-  const url = URL.createObjectURL(blob)
-  const lien = document.createElement('a')
-  lien.href = url
-  lien.download = 'participants-salon.csv'
-  lien.click()
-  URL.revokeObjectURL(url)
-}

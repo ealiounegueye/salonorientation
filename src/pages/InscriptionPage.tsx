@@ -30,6 +30,7 @@ const vide: FormulaireInscription = {
   fonction: '',
   profil: '',
   dates: '',
+  age: '',
   website: '',
 }
 
@@ -89,6 +90,11 @@ export function InscriptionPage() {
       setErreur('Indiquez un numéro de téléphone, sans lettres.')
       return
     }
+    const age = Number.parseInt(form.age, 10)
+    if (!Number.isFinite(age) || age < 16 || age > 110) {
+      setErreur('Indiquez votre âge (entre 16 et 110 ans).')
+      return
+    }
     if (!PROFILS.some((entree) => entree.valeur === form.profil)) {
       setErreur('Choisissez votre profil.')
       return
@@ -109,6 +115,7 @@ export function InscriptionPage() {
       fonction: form.fonction.trim(),
       profil: form.profil,
       dates,
+      age: String(age),
     })
     setEnvoi(false)
     if (!resultat.ok) {
@@ -203,6 +210,20 @@ export function InscriptionPage() {
             maxLength={15}
             value={form.telephone}
             onChange={(e) => maj('telephone', chiffres(e.target.value))}
+            className={champ}
+          />
+        </label>
+        <label className="block sm:max-w-xs">
+          {etiquette('Âge', true)}
+          <input
+            required
+            type="text"
+            inputMode="numeric"
+            minLength={2}
+            maxLength={3}
+            pattern="[0-9]{2,3}"
+            value={form.age}
+            onChange={(e) => maj('age', e.target.value.replace(/\D/g, '').slice(0, 3))}
             className={champ}
           />
         </label>

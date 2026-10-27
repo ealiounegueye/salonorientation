@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext'
 import { AppFooter } from './components/AppFooter'
 import { Protected } from './components/Protected'
 import { AdminPage } from './pages/AdminPage'
+import { DashboardPage } from './pages/DashboardPage'
 import { AdminParticipantPage } from './pages/AdminParticipantPage'
 import { ConfirmationPage } from './pages/ConfirmationPage'
 import { InscriptionPage } from './pages/InscriptionPage'
@@ -21,6 +22,14 @@ export default function App() {
               <Route path="/admin/connexion" element={<LoginPage />} />
               <Route
                 path="/admin"
+                element={
+                  <Protected>
+                    <DashboardPage />
+                  </Protected>
+                }
+              />
+              <Route
+                path="/admin/participants"
                 element={
                   <Protected>
                     <AdminPage />

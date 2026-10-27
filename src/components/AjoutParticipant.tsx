@@ -11,6 +11,7 @@ export function AjoutParticipant({ onCree }: { onCree: () => void }) {
   const [nom, setNom] = useState('')
   const [email, setEmail] = useState('')
   const [telephone, setTelephone] = useState('')
+  const [age, setAge] = useState('')
   const [profil, setProfil] = useState('')
   const [joursDispo, setJoursDispo] = useState<string[]>([...JOURS])
   const [jours, setJours] = useState<string[]>([])
@@ -44,6 +45,12 @@ export function AjoutParticipant({ onCree }: { onCree: () => void }) {
       setMessage('Indiquez un numéro de téléphone.')
       return
     }
+    const ageNum = Number.parseInt(age, 10)
+    if (!Number.isFinite(ageNum) || ageNum < 16 || ageNum > 110) {
+      setOk(false)
+      setMessage('Indiquez l’âge (16–110 ans).')
+      return
+    }
     if (!PROFILS.some((entree) => entree.valeur === profil) || jours.length === 0) {
       setOk(false)
       setMessage('Choisissez le profil et au moins une date.')
@@ -59,6 +66,7 @@ export function AjoutParticipant({ onCree }: { onCree: () => void }) {
       fonction: '',
       profil,
       dates: jours.join(','),
+      age: String(ageNum),
       website: '',
     })
     setEnvoi(false)
@@ -73,6 +81,7 @@ export function AjoutParticipant({ onCree }: { onCree: () => void }) {
       setNom('')
       setEmail('')
       setTelephone('')
+      setAge('')
       setProfil('')
       setJours([])
       onCree()
@@ -101,6 +110,16 @@ export function AjoutParticipant({ onCree }: { onCree: () => void }) {
           inputMode="numeric"
           value={telephone}
           onChange={(event) => setTelephone(event.target.value.replace(/\D/g, '').slice(0, 15))}
+          className={champ}
+        />
+      </label>
+      <label className="block">
+        <span className="mb-1.5 block text-sm font-medium">Âge</span>
+        <input
+          required
+          inputMode="numeric"
+          value={age}
+          onChange={(event) => setAge(event.target.value.replace(/\D/g, '').slice(0, 3))}
           className={champ}
         />
       </label>

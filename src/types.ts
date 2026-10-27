@@ -21,6 +21,7 @@ export type Participant = {
   fonction: string | null
   profil: ProfilParticipant | null
   dates: string | null
+  age: number | null
   statut: StatutParticipant
   email_envoye_at: string | null
   created_at: string

@@ -57,7 +57,7 @@ export function AdminParticipantPage() {
       setSuppression(false)
       return
     }
-    navigate('/admin', { replace: true })
+    navigate('/admin/participants', { replace: true })
   }
 
   async function renvoyer() {
@@ -76,7 +76,7 @@ export function AdminParticipantPage() {
     <div>
       <AppHeader subtitle="Badge" />
       <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
-        <Link to="/admin" className="text-sm font-medium text-red">
+        <Link to="/admin/participants" className="text-sm font-medium text-red">
           Retour aux participants
         </Link>
 
@@ -99,6 +99,10 @@ export function AdminParticipantPage() {
                 <div>
                   <dt className="inline text-muted">Téléphone : </dt>
                   <dd className="inline">{participant.telephone || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="inline text-muted">Âge : </dt>
+                  <dd className="inline">{participant.age ?? '—'}</dd>
                 </div>
                 <div>
                   <dt className="inline text-muted">Profil : </dt>

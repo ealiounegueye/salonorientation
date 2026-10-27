@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { Download, ScanLine, Search, Trash2, UserPlus } from 'lucide-react'
+import { FileSpreadsheet, FileText, ScanLine, Search, Trash2, UserPlus } from 'lucide-react'
 import { AjoutParticipant } from '../components/AjoutParticipant'
 import { AppHeader } from '../components/AppHeader'
 import { ScanPresence } from '../components/ScanPresence'
 import { useAuth } from '../context/AuthContext'
-import { exporterCsv, extraireCode, filtreRecherche, formatQuand, JOURS, libelleDates, libelleProfil, LIBELLE_STATUT, nomComplet, PROFILS } from '../lib/format'
+import { chargerParticipants, exporterExcel, exporterPdf } from '../lib/export'
+import { calculerStats } from '../lib/stats'
+import { extraireCode, filtreRecherche, formatQuand, JOURS, libelleDates, libelleProfil, LIBELLE_STATUT, nomComplet, PROFILS } from '../lib/format'
 import { demanderAccesCamera } from '../lib/camera'
 import { lireParametres } from '../lib/parametres'
 import { supabase } from '../lib/supabase'
@@ -22,9 +24,6 @@ export function AdminPage() {
   const { configured } = useAuth()
   const [lignes, setLignes] = useState<Participant[]>([])
   const [total, setTotal] = useState(0)
-  const [volume, setVolume] = useState(0)
-  const [presents, setPresents] = useState(0)
-  const [ouverts, setOuverts] = useState(true)
   const [recherche, setRecherche] = useState('')
   const [saisie, setSaisie] = useState('')
   const [filtre, setFiltre] = useState<(typeof FILTRES)[number]['id']>('tous')
@@ -45,18 +44,10 @@ export function AdminPage() {
   const son = useRef<AudioContext | null>(null)
   const flashTimer = useRef<number | null>(null)
 
-  const chargerStats = useCallback(async () => {
-    const [volumeRes, presentsRes, campagneRes, salon] = await Promise.all([
-      supabase.from('participants').select('*', { count: 'exact', head: true }),
-      supabase.from('participants').select('*', { count: 'exact', head: true }).eq('statut', 'present'),
-      supabase.from('campagne').select('ouverte').eq('id', 1).maybeSingle(),
-      lireParametres(true),
-    ])
-    setVolume(volumeRes.count ?? 0)
-    setPresents(presentsRes.count ?? 0)
-    if (campagneRes.data) setOuverts(Boolean(campagneRes.data.ouverte))
-    setJoursDispo(salon.jours)
-  }, [])
+  useEffect(() => {
+    if (!configured) return
+    void lireParametres(true).then((salon) => setJoursDispo(salon.jours))
+  }, [configured])
 
   const charger = useCallback(async () => {
     const ticket = ++requeteListe.current
@@ -77,11 +68,6 @@ export function AdminPage() {
     setTotal(count ?? 0)
     setListeEnCours(false)
   }, [filtre, jour, page, profil, recherche])
-
-  useEffect(() => {
-    if (!configured) return
-    void chargerStats()
-  }, [chargerStats, configured])
 
   useEffect(() => {
     if (configured) void charger()
@@ -120,12 +106,6 @@ export function AdminPage() {
     if (flashTimer.current) window.clearTimeout(flashTimer.current)
     flashTimer.current = window.setTimeout(() => setFlash(null), ok ? 1100 : 1800)
     bip(ok)
-  }
-
-  async function basculerCampagne() {
-    const suivante = !ouverts
-    const { error } = await supabase.from('campagne').update({ ouverte: suivante }).eq('id', 1)
-    if (!error) setOuverts(suivante)
   }
 
   async function marquerPresent(brut: string) {
@@ -185,22 +165,17 @@ export function AdminPage() {
     else void charger()
   }
 
-  async function exporter() {
+  async function exporter(format: 'xlsx' | 'pdf') {
     setExportEnCours(true)
-    const toutes: Participant[] = []
-    const filtreTexte = filtreRecherche(recherche)
-    for (let from = 0; from < 20000; from += 1000) {
-      let requete = supabase.from('participants').select('*').order('created_at', { ascending: false })
-      if (filtre !== 'tous') requete = requete.eq('statut', filtre)
-      if (profil !== 'tous') requete = requete.eq('profil', profil)
-      if (jour !== 'toutes') requete = requete.contains('jours_sel', [jour])
-      if (filtreTexte) requete = requete.or(filtreTexte)
-      const { data, error } = await requete.range(from, from + 999)
-      if (error || !data?.length) break
-      toutes.push(...(data as Participant[]))
-      if (data.length < 1000) break
-    }
-    exporterCsv(toutes)
+    const toutes = await chargerParticipants({
+      statut: filtre,
+      profil,
+      jour,
+      recherche,
+    })
+    const stats = calculerStats(toutes, joursDispo)
+    if (format === 'xlsx') exporterExcel(toutes)
+    else exporterPdf(toutes, stats)
     setExportEnCours(false)
   }
 
@@ -241,29 +216,6 @@ export function AdminPage() {
               {flash}
             </p>
           )}
-        </section>
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <article className="rounded-2xl border border-line bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Inscriptions</p>
-            <p className="mt-1 text-3xl font-semibold">{volume}</p>
-          </article>
-          <article className="rounded-2xl border border-line bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Présents</p>
-            <p className="mt-1 text-3xl font-semibold text-green">{presents}</p>
-          </article>
-          <article className="col-span-2 flex items-center justify-between gap-3 rounded-2xl border border-line bg-white p-4 sm:col-span-1">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Campagne</p>
-              <p className="mt-1 font-semibold">{ouverts ? 'Ouverte' : 'Fermée'}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => void basculerCampagne()}
-              className="rounded-full bg-red px-4 py-2 text-sm font-semibold text-white hover:bg-red-dark"
-            >
-              {ouverts ? 'Fermer' : 'Ouvrir'}
-            </button>
-          </article>
         </section>
 
         <form onSubmit={(event) => void pointer(event)} className="rounded-2xl border border-line bg-white p-4">
@@ -326,12 +278,21 @@ export function AdminPage() {
               </button>
               <button
                 type="button"
-                onClick={() => void exporter()}
+                onClick={() => void exporter('xlsx')}
                 disabled={exportEnCours}
                 className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-sm font-medium hover:border-red/40 disabled:opacity-60"
               >
-                <Download className="size-4" />
+                <FileSpreadsheet className="size-4" />
                 {exportEnCours ? 'Export…' : 'Excel'}
+              </button>
+              <button
+                type="button"
+                onClick={() => void exporter('pdf')}
+                disabled={exportEnCours}
+                className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-sm font-medium hover:border-red/40 disabled:opacity-60"
+              >
+                <FileText className="size-4" />
+                PDF
               </button>
             </div>
           </div>
@@ -406,10 +367,7 @@ export function AdminPage() {
           {ajout && (
             <div className="border-b border-line p-4">
               <AjoutParticipant
-                onCree={() => {
-                  void charger()
-                  void chargerStats()
-                }}
+                onCree={() => void charger()}
               />
             </div>
           )}

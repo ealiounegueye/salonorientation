@@ -7,14 +7,15 @@ import { LogoAuchan } from './LogoAuchan'
 export function AppHeader({ subtitle }: { subtitle: string }) {
   const { profile, signOut } = useAuth()
   const { pathname } = useLocation()
-  const listeActive = pathname === '/admin'
+  const dashboardActif = pathname === '/admin'
+  const listeActive = pathname === '/admin/participants' || pathname.startsWith('/admin/participants/')
   const reglagesActifs = pathname === '/admin/reglages'
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
       <div className="flex items-center justify-between gap-2 px-3 py-2 sm:gap-4 sm:px-6 sm:py-3">
         <div className="flex min-w-0 items-center gap-2 sm:gap-4">
-          <Link to="/admin" className="shrink-0" aria-label="Retour aux participants">
+          <Link to="/admin" className="shrink-0" aria-label="Tableau de bord">
             <LogoAuchan className="h-7 w-auto max-w-[9.5rem] object-contain object-left sm:h-9 sm:max-w-none" />
           </Link>
           <div className="hidden h-8 w-px bg-line sm:block" />
@@ -29,6 +30,16 @@ export function AppHeader({ subtitle }: { subtitle: string }) {
           <nav className="flex items-center gap-1.5 text-xs font-medium sm:gap-2 sm:text-sm">
             <Link
               to="/admin"
+              className={
+                dashboardActif
+                  ? 'rounded-full bg-red px-2.5 py-1.5 text-white sm:px-3'
+                  : 'rounded-full border border-line px-2.5 py-1.5 hover:border-red/40 sm:px-3'
+              }
+            >
+              Tableau de bord
+            </Link>
+            <Link
+              to="/admin/participants"
               className={
                 listeActive
                   ? 'rounded-full bg-red px-2.5 py-1.5 text-white sm:px-3'

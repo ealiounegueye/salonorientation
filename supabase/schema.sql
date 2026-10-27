@@ -75,6 +75,10 @@ create index if not exists participants_profil_idx
 
 alter table public.participants add column if not exists profil text;
 alter table public.participants add column if not exists dates text;
+alter table public.participants add column if not exists age integer;
+alter table public.participants drop constraint if exists participants_age_check;
+alter table public.participants
+  add constraint participants_age_check check (age is null or (age >= 16 and age <= 110));
 
 alter table public.participants drop constraint if exists participants_profil_check;
 alter table public.participants
@@ -184,6 +188,7 @@ grant execute on function public.badge_public(text) to anon, authenticated;
 
 drop function if exists public.inscrire(text, text, text, text, text, text, text);
 drop function if exists public.inscrire(text, text, text, text, text, text, text, text, text);
+drop function if exists public.inscrire(text, text, text, text, text, text, text, text, text, integer);
 
 create or replace function public.inscrire(
   p_prenom text,
@@ -194,7 +199,8 @@ create or replace function public.inscrire(
   p_fonction text default '',
   p_website text default '',
   p_profil text default '',
-  p_dates text default ''
+  p_dates text default '',
+  p_age integer default null
 )
 returns jsonb
 language plpgsql
@@ -218,6 +224,7 @@ declare
   v_code text;
   v_essai int;
   v_i int;
+  v_age int := p_age;
 begin
   if v_website <> '' then
     return jsonb_build_object('ok', false, 'message', 'Inscription impossible.');
@@ -233,6 +240,10 @@ begin
 
   if v_telephone is null or v_telephone !~ '^[0-9]{8,15}$' then
     return jsonb_build_object('ok', false, 'message', 'Indiquez un numéro de téléphone.');
+  end if;
+
+  if v_age is null or v_age < 16 or v_age > 110 then
+    return jsonb_build_object('ok', false, 'message', 'Indiquez votre âge.');
   end if;
 
   if v_profil not in ('professionnel', 'etudiant', 'chercheur', 'visiteur') then
@@ -277,8 +288,8 @@ begin
     end loop;
 
     begin
-      insert into public.participants (code, prenom, nom, email, telephone, organisation, fonction, profil, dates, statut)
-      values (v_code, v_prenom, v_nom, v_email, v_telephone, v_organisation, v_fonction, v_profil, v_dates, 'inscrit')
+      insert into public.participants (code, prenom, nom, email, telephone, organisation, fonction, profil, dates, age, statut)
+      values (v_code, v_prenom, v_nom, v_email, v_telephone, v_organisation, v_fonction, v_profil, v_dates, v_age, 'inscrit')
       returning * into v_row;
       return jsonb_build_object('ok', true, 'code', v_row.code, 'deja_inscrit', false);
     exception
@@ -297,8 +308,8 @@ begin
 end;
 $$;
 
-revoke all on function public.inscrire(text, text, text, text, text, text, text, text, text) from public, anon, authenticated;
-grant execute on function public.inscrire(text, text, text, text, text, text, text, text, text) to anon, authenticated;
+revoke all on function public.inscrire(text, text, text, text, text, text, text, text, text, integer) from public, anon, authenticated;
+grant execute on function public.inscrire(text, text, text, text, text, text, text, text, text, integer) to anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- RLS

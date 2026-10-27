@@ -10,6 +10,7 @@ export type FormulaireInscription = {
   fonction: string
   profil: string
   dates: string
+  age: string
   website: string
 }
 
@@ -31,6 +32,7 @@ export async function inscrire(formulaire: FormulaireInscription): Promise<Resul
     p_website: formulaire.website,
     p_profil: formulaire.profil,
     p_dates: formulaire.dates,
+    p_age: Number.parseInt(formulaire.age, 10),
   })
 
   if (error || !data) {
