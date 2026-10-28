@@ -16,6 +16,19 @@ export function estAujourdDhakar(iso: string) {
   return jourDakar(iso) === jourDakar(new Date().toISOString())
 }
 
+export const TRANCHES_AGE = [
+  { id: 'moins-20', libelle: 'moins de 20 ans', couleur: '#2563eb' },
+  { id: '20-35', libelle: '20 à 35 ans', couleur: '#16a34a' },
+  { id: '36-plus', libelle: '36 ans et plus', couleur: '#ea580c' },
+] as const
+
+export function trancheAge(age: number | null | undefined) {
+  if (typeof age !== 'number' || age < 16) return null
+  if (age < 20) return 'moins-20'
+  if (age <= 35) return '20-35'
+  return '36-plus'
+}
+
 export type StatsSalon = {
   total: number
   inscrits: number
@@ -27,7 +40,10 @@ export type StatsSalon = {
   ageMoyen: number | null
   parProfil: { valeur: string; libelle: string; count: number }[]
   parSexe: { valeur: string; libelle: string; count: number }[]
-  parDate: { jour: string; count: number }[]
+  parDate: { jour: string; libelle: string; couleur: string; count: number }[]
+  selectionsDate: number
+  parAge: { id: (typeof TRANCHES_AGE)[number]['id']; libelle: string; couleur: string; count: number }[]
+  agesRenseignes: number
 }
 
 export function calculerStats(participants: Participant[], jours: readonly string[] = JOURS): StatsSalon {
@@ -54,14 +70,41 @@ export function calculerStats(participants: Participant[], jours: readonly strin
     count: actifs.filter((p) => p.sexe === entree.valeur).length,
   }))
 
-  const parDate = jours.map((jour) => {
+  const couleursJour = ['#2563eb', '#16a34a', '#ea580c'] as const
+  let selectionsDate = 0
+  const parDate = jours.map((jour, index) => {
     let count = 0
     for (const p of actifs) {
       const sel = p.dates?.split(',').map((d) => d.trim()) ?? []
       if (sel.includes(jour)) count += 1
     }
-    return { jour, count }
+    selectionsDate += count
+    return {
+      jour,
+      libelle: `${jour} novembre`,
+      couleur: couleursJour[index % couleursJour.length],
+      count,
+    }
   })
+
+  const compteurAge: Record<(typeof TRANCHES_AGE)[number]['id'], number> = {
+    'moins-20': 0,
+    '20-35': 0,
+    '36-plus': 0,
+  }
+  let agesRenseignes = 0
+  for (const p of actifs) {
+    const tranche = trancheAge(p.age)
+    if (!tranche) continue
+    agesRenseignes += 1
+    compteurAge[tranche] += 1
+  }
+  const parAge = TRANCHES_AGE.map((entree) => ({
+    id: entree.id,
+    libelle: entree.libelle,
+    couleur: entree.couleur,
+    count: compteurAge[entree.id],
+  }))
 
   return {
     total: participants.length,
@@ -75,5 +118,8 @@ export function calculerStats(participants: Participant[], jours: readonly strin
     parProfil,
     parSexe,
     parDate,
+    selectionsDate,
+    parAge,
+    agesRenseignes,
   }
 }
