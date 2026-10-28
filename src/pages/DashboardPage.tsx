@@ -38,15 +38,15 @@ function BarresColonnes({ data }: { data: EntreeBarres[] }) {
               <div key={tick} className="border-t border-line/80" />
             ))}
           </div>
-          <div className="relative flex h-[220px] items-end justify-around gap-4 px-2 pb-8">
+          <div className="relative flex h-[220px] items-end justify-around gap-4 px-2">
             {data.map((entree) => {
-              const hauteur = entree.count > 0 ? Math.max(12, Math.round((entree.count / plafond) * 100)) : 0
+              const hauteurPx = entree.count > 0 ? Math.max(12, Math.round((entree.count / plafond) * 180)) : 0
               return (
-                <div key={entree.cle} className="flex min-w-0 flex-1 flex-col items-center">
+                <div key={entree.cle} className="flex min-w-0 flex-1 flex-col items-center justify-end">
                   <p className="mb-1 text-sm font-semibold text-ink">{entree.count}</p>
                   <div
                     className="w-full max-w-[4.5rem] rounded-t-lg transition-all"
-                    style={{ height: `${hauteur}%`, backgroundColor: entree.couleur }}
+                    style={{ height: `${hauteurPx}px`, backgroundColor: entree.couleur }}
                     title={`${entree.libelle} : ${entree.count}`}
                   />
                 </div>
@@ -136,6 +136,7 @@ export function DashboardPage() {
 
   const maxProfil = stats ? Math.max(1, ...stats.parProfil.map((p) => p.count)) : 1
   const maxSexe = stats ? Math.max(1, ...stats.parSexe.map((p) => p.count)) : 1
+  const maxDate = stats ? Math.max(1, ...stats.parDate.map((d) => d.count)) : 1
 
   return (
     <div>
@@ -231,6 +232,37 @@ export function DashboardPage() {
               </p>
             )}
 
+            <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <article className="rounded-2xl border border-line bg-white p-4">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">Par profil</h2>
+                <div className="mt-4 space-y-3">
+                  {stats.parProfil.map((entree) => (
+                    <Barre key={entree.valeur} label={entree.libelle} value={entree.count} max={maxProfil} />
+                  ))}
+                </div>
+              </article>
+              <article className="rounded-2xl border border-line bg-white p-4">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">Par sexe</h2>
+                <div className="mt-4 space-y-3">
+                  {stats.parSexe.map((entree) => (
+                    <Barre key={entree.valeur} label={entree.libelle} value={entree.count} max={maxSexe} />
+                  ))}
+                </div>
+              </article>
+              <article className="rounded-2xl border border-line bg-white p-4 md:col-span-2 lg:col-span-1">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">Par date de venue</h2>
+                <p className="mt-1 text-xs text-muted">
+                  {stats.actifs} inscription{stats.actifs > 1 ? 's' : ''} active{stats.actifs > 1 ? 's' : ''} · un
+                  participant peut choisir plusieurs jours.
+                </p>
+                <div className="mt-4 space-y-3">
+                  {stats.parDate.map((entree) => (
+                    <Barre key={entree.jour} label={entree.libelle} value={entree.count} max={maxDate} />
+                  ))}
+                </div>
+              </article>
+            </section>
+
             <section className="rounded-2xl border border-line bg-white p-4">
               <h2 className="text-base font-semibold text-ink">Répartition par tranche d&apos;âge</h2>
               {stats.agesRenseignes === 0 ? (
@@ -254,50 +286,6 @@ export function DashboardPage() {
                   </p>
                 </>
               )}
-            </section>
-
-            <section className="rounded-2xl border border-line bg-white p-4">
-              <h2 className="text-base font-semibold text-ink">Répartition par date de venue</h2>
-              <p className="mt-1 text-sm text-muted">
-                Sur {stats.actifs} inscription{stats.actifs > 1 ? 's' : ''} active{stats.actifs > 1 ? 's' : ''}, combien
-                ont choisi chaque jour (plusieurs dates possibles).
-              </p>
-              {stats.parDate.length === 0 ? (
-                <p className="mt-3 text-sm text-muted">Aucune date configurée.</p>
-              ) : (
-                <>
-                  <BarresColonnes
-                    data={stats.parDate.map((entree) => ({
-                      cle: entree.jour,
-                      libelle: entree.libelle,
-                      couleur: entree.couleur,
-                      count: entree.count,
-                    }))}
-                  />
-                  <p className="mt-2 text-xs text-muted">
-                    Total des choix de dates : {stats.selectionsDate} · participants uniques : {stats.actifs}.
-                  </p>
-                </>
-              )}
-            </section>
-
-            <section className="grid gap-4 md:grid-cols-2">
-              <article className="rounded-2xl border border-line bg-white p-4">
-                <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">Par profil</h2>
-                <div className="mt-4 space-y-3">
-                  {stats.parProfil.map((entree) => (
-                    <Barre key={entree.valeur} label={entree.libelle} value={entree.count} max={maxProfil} />
-                  ))}
-                </div>
-              </article>
-              <article className="rounded-2xl border border-line bg-white p-4">
-                <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">Par sexe</h2>
-                <div className="mt-4 space-y-3">
-                  {stats.parSexe.map((entree) => (
-                    <Barre key={entree.valeur} label={entree.libelle} value={entree.count} max={maxSexe} />
-                  ))}
-                </div>
-              </article>
             </section>
           </>
         )}
