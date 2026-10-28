@@ -16,10 +16,12 @@ export function estAujourdDhakar(iso: string) {
   return jourDakar(iso) === jourDakar(new Date().toISOString())
 }
 
+export const COULEURS_AUCHAN = ['#e0001a', '#00985f', '#1a1a1a'] as const
+
 export const TRANCHES_AGE = [
-  { id: 'moins-20', libelle: 'moins de 20 ans', couleur: '#2563eb' },
-  { id: '20-35', libelle: '20 à 35 ans', couleur: '#16a34a' },
-  { id: '36-plus', libelle: '36 ans et plus', couleur: '#ea580c' },
+  { id: 'moins-20', libelle: 'moins de 20 ans', couleur: COULEURS_AUCHAN[0] },
+  { id: '20-35', libelle: '20 à 35 ans', couleur: COULEURS_AUCHAN[1] },
+  { id: '36-plus', libelle: '36 ans et plus', couleur: COULEURS_AUCHAN[2] },
 ] as const
 
 export function trancheAge(age: number | null | undefined) {
@@ -70,7 +72,7 @@ export function calculerStats(participants: Participant[], jours: readonly strin
     count: actifs.filter((p) => p.sexe === entree.valeur).length,
   }))
 
-  const couleursJour = ['#2563eb', '#16a34a', '#ea580c'] as const
+  const couleursJour = COULEURS_AUCHAN
   let selectionsDate = 0
   const parDate = jours.map((jour, index) => {
     let count = 0

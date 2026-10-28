@@ -16,7 +16,7 @@ export function AppHeader({ subtitle }: { subtitle: string }) {
       <div className="flex items-center justify-between gap-2 px-3 py-2 sm:gap-4 sm:px-6 sm:py-3">
         <div className="flex min-w-0 items-center gap-2 sm:gap-4">
           <Link to="/admin" className="shrink-0" aria-label="Tableau de bord">
-            <LogoAuchan className="h-7 w-auto max-w-[9.5rem] object-contain object-left sm:h-9 sm:max-w-none" />
+            <LogoAuchan className="max-w-[9.5rem] object-left sm:h-9 sm:max-w-none" />
           </Link>
           <div className="hidden h-8 w-px bg-line sm:block" />
           <div className="min-w-0">

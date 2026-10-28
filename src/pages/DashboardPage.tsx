@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Download, FileSpreadsheet, FileText, ScanLine, Users } from 'lucide-react'
 import { AppHeader } from '../components/AppHeader'
 import { useAuth } from '../context/AuthContext'
-import { calculerStats, type StatsSalon } from '../lib/stats'
+import { calculerStats, COULEURS_AUCHAN, type StatsSalon } from '../lib/stats'
 import { chargerParticipants, exporterCsv, exporterExcel, exporterPdf } from '../lib/export'
 import { lireParametres } from '../lib/parametres'
 import { supabase } from '../lib/supabase'
@@ -67,8 +67,9 @@ function BarresColonnes({ data }: { data: EntreeBarres[] }) {
   )
 }
 
-function Barre({ label, value, max }: { label: string; value: number; max: number }) {
+function Barre({ label, value, max, couleur }: { label: string; value: number; max: number; couleur?: string }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0
+  const fill = couleur ?? COULEURS_AUCHAN[0]
   return (
     <div>
       <div className="mb-1 flex justify-between text-sm">
@@ -76,7 +77,7 @@ function Barre({ label, value, max }: { label: string; value: number; max: numbe
         <span className="text-muted">{value}</span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-paper">
-        <div className="h-full rounded-full bg-red transition-all" style={{ width: `${pct}%` }} />
+        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: fill }} />
       </div>
     </div>
   )
@@ -236,16 +237,28 @@ export function DashboardPage() {
               <article className="rounded-2xl border border-line bg-white p-4">
                 <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">Par profil</h2>
                 <div className="mt-4 space-y-3">
-                  {stats.parProfil.map((entree) => (
-                    <Barre key={entree.valeur} label={entree.libelle} value={entree.count} max={maxProfil} />
+                  {stats.parProfil.map((entree, index) => (
+                    <Barre
+                      key={entree.valeur}
+                      label={entree.libelle}
+                      value={entree.count}
+                      max={maxProfil}
+                      couleur={COULEURS_AUCHAN[index % COULEURS_AUCHAN.length]}
+                    />
                   ))}
                 </div>
               </article>
               <article className="rounded-2xl border border-line bg-white p-4">
                 <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">Par sexe</h2>
                 <div className="mt-4 space-y-3">
-                  {stats.parSexe.map((entree) => (
-                    <Barre key={entree.valeur} label={entree.libelle} value={entree.count} max={maxSexe} />
+                  {stats.parSexe.map((entree, index) => (
+                    <Barre
+                      key={entree.valeur}
+                      label={entree.libelle}
+                      value={entree.count}
+                      max={maxSexe}
+                      couleur={COULEURS_AUCHAN[index % COULEURS_AUCHAN.length]}
+                    />
                   ))}
                 </div>
               </article>
@@ -256,8 +269,14 @@ export function DashboardPage() {
                   participant peut choisir plusieurs jours.
                 </p>
                 <div className="mt-4 space-y-3">
-                  {stats.parDate.map((entree) => (
-                    <Barre key={entree.jour} label={entree.libelle} value={entree.count} max={maxDate} />
+                  {stats.parDate.map((entree, index) => (
+                    <Barre
+                      key={entree.jour}
+                      label={entree.libelle}
+                      value={entree.count}
+                      max={maxDate}
+                      couleur={entree.couleur ?? COULEURS_AUCHAN[index % COULEURS_AUCHAN.length]}
+                    />
                   ))}
                 </div>
               </article>
