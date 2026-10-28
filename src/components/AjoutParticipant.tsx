@@ -54,7 +54,7 @@ export function AjoutParticipant({ onCree }: { onCree: () => void }) {
     }
     if (sexe !== 'h' && sexe !== 'f') {
       setOk(false)
-      setMessage('Indiquez le sexe (H ou F).')
+      setMessage('Indiquez le sexe (M ou F).')
       return
     }
     if (!PROFILS.some((entree) => entree.valeur === profil) || jours.length === 0) {
@@ -77,10 +77,6 @@ export function AjoutParticipant({ onCree }: { onCree: () => void }) {
     setEnvoi(false)
     setOk(resultat.ok)
     if (!resultat.ok) {
-      setMessage(resultat.message)
-      return
-    }
-    if (resultat.dejaInscrit) {
       setMessage(resultat.message)
       return
     }
@@ -131,13 +127,13 @@ export function AjoutParticipant({ onCree }: { onCree: () => void }) {
           className={champ}
         />
       </label>
-      <fieldset className="sm:col-span-2">
+      <fieldset className="min-w-0">
         <legend className="mb-1.5 text-sm font-medium">Sexe</legend>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {SEXES.map((entree) => (
             <label
               key={entree.valeur}
-              className="flex cursor-pointer items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-semibold has-[:checked]:border-red has-[:checked]:bg-red/5"
+              className="flex cursor-pointer items-center justify-center gap-1.5 rounded-2xl border border-line px-2 py-3 text-sm font-semibold has-[:checked]:border-red has-[:checked]:bg-red/5"
             >
               <input
                 type="radio"
@@ -146,7 +142,7 @@ export function AjoutParticipant({ onCree }: { onCree: () => void }) {
                 value={entree.valeur}
                 checked={sexe === entree.valeur}
                 onChange={() => setSexe(entree.valeur)}
-                className="size-4 accent-red"
+                className="size-4 shrink-0 accent-red"
               />
               {entree.code}
             </label>

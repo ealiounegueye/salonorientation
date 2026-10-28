@@ -26,9 +26,6 @@ const FENETRE_MS = 10 * 60 * 1000
 const PLAFOND_PUBLIC = 30
 const PLAFOND_ADMIN = 120
 const RENVOI_MS = 15 * 60 * 1000
-const MESSAGE_DEJA =
-  'Si cette adresse est déjà inscrite, le badge a été renvoyé par e-mail.'
-
 function texte(valeur: unknown, max: number) {
   return String(valeur ?? '').trim().slice(0, max)
 }
@@ -130,13 +127,6 @@ Deno.serve(async (req) => {
     if (envoi.emailEnvoye) {
       await admin.from('participants').update({ email_envoye_at: new Date().toISOString() }).eq('id', participant.id)
     }
-  }
-
-  if (reponse.deja_inscrit) {
-    const message = emailEnvoye
-      ? (recent ? 'Si cette adresse est déjà inscrite, le badge a déjà été envoyé par e-mail.' : MESSAGE_DEJA)
-      : 'Si cette adresse est déjà inscrite, le renvoi du badge n’a pas abouti. Réessayez dans un moment.'
-    return json({ ok: true, dejaInscrit: true, emailEnvoye, message })
   }
 
   return json({

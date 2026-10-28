@@ -35,8 +35,7 @@ export type BadgePublic = {
 }
 
 export type ResultatInscription =
-  | { ok: true; dejaInscrit: false; code: string; emailEnvoye: boolean; emailMessage?: string }
-  | { ok: true; dejaInscrit: true; emailEnvoye: boolean; message: string }
+  | { ok: true; code: string; emailEnvoye: boolean; emailMessage?: string; dejaInscrit?: false }
   | { ok: false; message: string }
 
 export type ResultatEnvoi = {

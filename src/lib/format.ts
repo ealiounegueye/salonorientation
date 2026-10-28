@@ -3,7 +3,7 @@ import type { ProfilParticipant, SexeParticipant, StatutParticipant } from '../t
 export const JOURS = ['18', '19', '20'] as const
 
 export const SEXES: { valeur: SexeParticipant; libelle: string; code: string }[] = [
-  { valeur: 'h', libelle: 'Homme', code: 'H' },
+  { valeur: 'h', libelle: 'Homme', code: 'M' },
   { valeur: 'f', libelle: 'Femme', code: 'F' },
 ]
 

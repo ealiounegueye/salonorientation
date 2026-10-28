@@ -40,7 +40,6 @@ export function InscriptionPage() {
   const [joursDispo, setJoursDispo] = useState<string[]>([...JOURS])
   const [jours, setJours] = useState<string[]>([])
   const [erreur, setErreur] = useState<string | null>(null)
-  const [annonce, setAnnonce] = useState<string | null>(null)
   const [envoi, setEnvoi] = useState(false)
   const toutes = joursDispo.length > 0 && joursDispo.every((jour) => jours.includes(jour))
 
@@ -74,7 +73,6 @@ export function InscriptionPage() {
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     setErreur(null)
-    setAnnonce(null)
     const prenom = form.prenom.trim()
     const nom = form.nom.trim()
     const email = form.email.trim()
@@ -123,10 +121,6 @@ export function InscriptionPage() {
     setEnvoi(false)
     if (!resultat.ok) {
       setErreur(resultat.message)
-      return
-    }
-    if (resultat.dejaInscrit) {
-      setAnnonce(resultat.message)
       return
     }
     await telechargerBadge({ code: resultat.code, prenom, nom })
@@ -220,44 +214,46 @@ export function InscriptionPage() {
             className={champ}
           />
         </label>
-        <label className="block sm:max-w-xs">
-          {etiquette('Âge', true)}
-          <input
-            required
-            type="text"
-            inputMode="numeric"
-            minLength={2}
-            maxLength={3}
-            pattern="[0-9]{2,3}"
-            value={form.age}
-            onChange={(e) => maj('age', e.target.value.replace(/\D/g, '').slice(0, 3))}
-            className={champ}
-          />
-        </label>
-        <fieldset>
-          <legend className="mb-1.5 block text-sm font-medium">
-            Sexe <span className="text-red">*</span>
-          </legend>
-          <div className="grid max-w-xs grid-cols-2 gap-2">
-            {SEXES.map((entree) => (
-              <label
-                key={entree.valeur}
-                className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-line px-3 py-3.5 text-sm font-semibold tracking-wide has-[:checked]:border-red has-[:checked]:bg-red/5"
-              >
-                <input
-                  type="radio"
-                  name="sexe"
-                  required
-                  value={entree.valeur}
-                  checked={form.sexe === entree.valeur}
-                  onChange={() => maj('sexe', entree.valeur)}
-                  className="size-4 accent-red"
-                />
-                {entree.code}
-              </label>
-            ))}
-          </div>
-        </fieldset>
+        <div className="grid grid-cols-2 gap-4">
+          <label className="block min-w-0">
+            {etiquette('Âge', true)}
+            <input
+              required
+              type="text"
+              inputMode="numeric"
+              minLength={2}
+              maxLength={3}
+              pattern="[0-9]{2,3}"
+              value={form.age}
+              onChange={(e) => maj('age', e.target.value.replace(/\D/g, '').slice(0, 3))}
+              className={champ}
+            />
+          </label>
+          <fieldset className="min-w-0">
+            <legend className="mb-1.5 block text-sm font-medium">
+              Sexe <span className="text-red">*</span>
+            </legend>
+            <div className="grid grid-cols-2 gap-2">
+              {SEXES.map((entree) => (
+                <label
+                  key={entree.valeur}
+                  className="flex cursor-pointer items-center justify-center gap-1.5 rounded-2xl border border-line px-2 py-3.5 text-sm font-semibold tracking-wide has-[:checked]:border-red has-[:checked]:bg-red/5"
+                >
+                  <input
+                    type="radio"
+                    name="sexe"
+                    required
+                    value={entree.valeur}
+                    checked={form.sexe === entree.valeur}
+                    onChange={() => maj('sexe', entree.valeur)}
+                    className="size-4 shrink-0 accent-red"
+                  />
+                  {entree.code}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        </div>
         <label className="block">
           {etiquette('Vous êtes', true)}
           <select required value={form.profil} onChange={(e) => maj('profil', e.target.value)} className={champ}>
@@ -298,7 +294,6 @@ export function InscriptionPage() {
           </label>
         </div>
         {erreur && <p className="text-sm font-medium text-red">{erreur}</p>}
-        {annonce && <p className="text-sm font-medium text-ink">{annonce}</p>}
         <button
           type="submit"
           disabled={formulaireBloque}

@@ -50,6 +50,10 @@ alter table public.campagne add column if not exists jours text not null default
 create unique index if not exists participants_email_lower_idx
   on public.participants (lower(email));
 
+create unique index if not exists participants_telephone_actif_idx
+  on public.participants (telephone)
+  where telephone is not null and statut <> 'annule';
+
 create index if not exists participants_created_idx
   on public.participants (created_at desc);
 
@@ -283,7 +287,16 @@ begin
     if v_row.statut = 'annule' then
       return jsonb_build_object('ok', false, 'message', 'Cette inscription a été annulée. Contactez l’organisation.');
     end if;
-    return jsonb_build_object('ok', true, 'deja_inscrit', true, 'id', v_row.id);
+    return jsonb_build_object('ok', false, 'message', 'Cette adresse e-mail est déjà utilisée.');
+  end if;
+
+  select * into v_row
+  from public.participants
+  where telephone = v_telephone and statut <> 'annule'
+  limit 1;
+
+  if found then
+    return jsonb_build_object('ok', false, 'message', 'Ce numéro de téléphone est déjà utilisé.');
   end if;
 
   select coalesce((select ouverte from public.campagne where id = 1), false) into v_ouverte;
@@ -301,12 +314,17 @@ begin
       return jsonb_build_object('ok', true, 'code', v_row.code, 'deja_inscrit', false, 'id', v_row.id);
     exception
       when unique_violation then
-        select * into v_row from public.participants where lower(email) = v_email limit 1;
-        if found then
-          if v_row.statut = 'annule' then
-            return jsonb_build_object('ok', false, 'message', 'Cette inscription a été annulée. Contactez l’organisation.');
-          end if;
-          return jsonb_build_object('ok', true, 'deja_inscrit', true, 'id', v_row.id);
+        if exists (
+          select 1 from public.participants
+          where lower(email) = v_email and statut <> 'annule'
+        ) then
+          return jsonb_build_object('ok', false, 'message', 'Cette adresse e-mail est déjà utilisée.');
+        end if;
+        if exists (
+          select 1 from public.participants
+          where telephone = v_telephone and statut <> 'annule'
+        ) then
+          return jsonb_build_object('ok', false, 'message', 'Ce numéro de téléphone est déjà utilisé.');
         end if;
     end;
   end loop;

@@ -25,19 +25,9 @@ export async function inscrire(formulaire: FormulaireInscription): Promise<Resul
   const { data, error } = await supabase.functions.invoke('inscrire', { body: formulaire })
   const reponse = data as ReponseInscrire | null
 
-  if (reponse?.ok && reponse.dejaInscrit) {
-    return {
-      ok: true,
-      dejaInscrit: true,
-      emailEnvoye: Boolean(reponse.emailEnvoye),
-      message: reponse.message || 'Si cette adresse est déjà inscrite, le badge a été renvoyé par e-mail.',
-    }
-  }
-
   if (reponse?.ok && reponse.code) {
     return {
       ok: true,
-      dejaInscrit: false,
       code: reponse.code,
       emailEnvoye: Boolean(reponse.emailEnvoye),
       emailMessage: reponse.emailEnvoye ? undefined : reponse.message,
