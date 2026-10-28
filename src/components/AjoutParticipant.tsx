@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { inscrire } from '../lib/api'
-import { JOURS, PROFILS } from '../lib/format'
+import { JOURS, PROFILS, SEXES } from '../lib/format'
 import { lireParametres } from '../lib/parametres'
 
 const champ =
@@ -12,6 +12,7 @@ export function AjoutParticipant({ onCree }: { onCree: () => void }) {
   const [email, setEmail] = useState('')
   const [telephone, setTelephone] = useState('')
   const [age, setAge] = useState('')
+  const [sexe, setSexe] = useState('')
   const [profil, setProfil] = useState('')
   const [joursDispo, setJoursDispo] = useState<string[]>([...JOURS])
   const [jours, setJours] = useState<string[]>([])
@@ -51,6 +52,11 @@ export function AjoutParticipant({ onCree }: { onCree: () => void }) {
       setMessage('Indiquez l’âge (16–110 ans).')
       return
     }
+    if (sexe !== 'h' && sexe !== 'f') {
+      setOk(false)
+      setMessage('Indiquez le sexe (H ou F).')
+      return
+    }
     if (!PROFILS.some((entree) => entree.valeur === profil) || jours.length === 0) {
       setOk(false)
       setMessage('Choisissez le profil et au moins une date.')
@@ -62,11 +68,10 @@ export function AjoutParticipant({ onCree }: { onCree: () => void }) {
       nom: nom.trim(),
       email: email.trim(),
       telephone: tel,
-      organisation: '',
-      fonction: '',
       profil,
       dates: jours.join(','),
       age: String(ageNum),
+      sexe,
       website: '',
     })
     setEnvoi(false)
@@ -75,17 +80,20 @@ export function AjoutParticipant({ onCree }: { onCree: () => void }) {
       setMessage(resultat.message)
       return
     }
-    setMessage(resultat.dejaInscrit ? `Déjà inscrit — ${resultat.code}` : `Participant ajouté — ${resultat.code}`)
-    if (!resultat.dejaInscrit) {
-      setPrenom('')
-      setNom('')
-      setEmail('')
-      setTelephone('')
-      setAge('')
-      setProfil('')
-      setJours([])
-      onCree()
+    if (resultat.dejaInscrit) {
+      setMessage(resultat.message)
+      return
     }
+    setMessage(`Participant ajouté — ${resultat.code}`)
+    setPrenom('')
+    setNom('')
+    setEmail('')
+    setTelephone('')
+    setAge('')
+    setSexe('')
+    setProfil('')
+    setJours([])
+    onCree()
   }
 
   return (
@@ -123,6 +131,28 @@ export function AjoutParticipant({ onCree }: { onCree: () => void }) {
           className={champ}
         />
       </label>
+      <fieldset className="sm:col-span-2">
+        <legend className="mb-1.5 text-sm font-medium">Sexe</legend>
+        <div className="flex flex-wrap gap-2">
+          {SEXES.map((entree) => (
+            <label
+              key={entree.valeur}
+              className="flex cursor-pointer items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-semibold has-[:checked]:border-red has-[:checked]:bg-red/5"
+            >
+              <input
+                type="radio"
+                name="sexe-admin"
+                required
+                value={entree.valeur}
+                checked={sexe === entree.valeur}
+                onChange={() => setSexe(entree.valeur)}
+                className="size-4 accent-red"
+              />
+              {entree.code}
+            </label>
+          ))}
+        </div>
+      </fieldset>
       <label className="block sm:col-span-2">
         <span className="mb-1.5 block text-sm font-medium">Profil</span>
         <select required value={profil} onChange={(event) => setProfil(event.target.value)} className={champ}>

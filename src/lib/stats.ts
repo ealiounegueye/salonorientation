@@ -1,5 +1,5 @@
 import type { Participant } from '../types'
-import { JOURS, PROFILS } from './format'
+import { JOURS, PROFILS, SEXES } from './format'
 
 const dateurJour = new Intl.DateTimeFormat('fr-CA', {
   timeZone: 'Africa/Dakar',
@@ -26,6 +26,7 @@ export type StatsSalon = {
   inscriptionsAujourdhui: number
   ageMoyen: number | null
   parProfil: { valeur: string; libelle: string; count: number }[]
+  parSexe: { valeur: string; libelle: string; count: number }[]
   parDate: { jour: string; count: number }[]
 }
 
@@ -47,6 +48,12 @@ export function calculerStats(participants: Participant[], jours: readonly strin
     count: actifs.filter((p) => p.profil === entree.valeur).length,
   }))
 
+  const parSexe = SEXES.map((entree) => ({
+    valeur: entree.valeur,
+    libelle: `${entree.code} — ${entree.libelle}`,
+    count: actifs.filter((p) => p.sexe === entree.valeur).length,
+  }))
+
   const parDate = jours.map((jour) => {
     let count = 0
     for (const p of actifs) {
@@ -66,6 +73,7 @@ export function calculerStats(participants: Participant[], jours: readonly strin
     inscriptionsAujourdhui,
     ageMoyen,
     parProfil,
+    parSexe,
     parDate,
   }
 }

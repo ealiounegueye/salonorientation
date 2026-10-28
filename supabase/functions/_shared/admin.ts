@@ -30,3 +30,8 @@ export async function exigerAdmin(req: Request) {
 
   return { admin, userId: data.user.id }
 }
+
+export async function sessionEstAdmin(req: Request) {
+  const acces = await exigerAdmin(req)
+  return Boolean('admin' in acces && acces.admin)
+}

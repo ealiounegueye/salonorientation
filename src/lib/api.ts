@@ -6,11 +6,10 @@ export type FormulaireInscription = {
   nom: string
   email: string
   telephone: string
-  organisation: string
-  fonction: string
   profil: string
   dates: string
   age: string
+  sexe: string
   website: string
 }
 
@@ -18,46 +17,36 @@ type ReponseInscrire = {
   ok?: boolean
   message?: string
   code?: string
-  deja_inscrit?: boolean
+  dejaInscrit?: boolean
+  emailEnvoye?: boolean
 }
 
 export async function inscrire(formulaire: FormulaireInscription): Promise<ResultatInscription> {
-  const { data, error } = await supabase.rpc('inscrire', {
-    p_prenom: formulaire.prenom,
-    p_nom: formulaire.nom,
-    p_email: formulaire.email,
-    p_telephone: formulaire.telephone,
-    p_organisation: formulaire.organisation,
-    p_fonction: formulaire.fonction,
-    p_website: formulaire.website,
-    p_profil: formulaire.profil,
-    p_dates: formulaire.dates,
-    p_age: Number.parseInt(formulaire.age, 10),
-  })
+  const { data, error } = await supabase.functions.invoke('inscrire', { body: formulaire })
+  const reponse = data as ReponseInscrire | null
 
-  if (error || !data) {
-    return { ok: false, message: 'L’inscription n’a pas pu être enregistrée. Réessayez dans un instant.' }
+  if (reponse?.ok && reponse.dejaInscrit) {
+    return {
+      ok: true,
+      dejaInscrit: true,
+      emailEnvoye: Boolean(reponse.emailEnvoye),
+      message: reponse.message || 'Si cette adresse est déjà inscrite, le badge a été renvoyé par e-mail.',
+    }
   }
 
-  const reponse = data as ReponseInscrire
-  if (!reponse.ok || !reponse.code) {
-    return { ok: false, message: reponse.message ?? 'L’inscription n’a pas pu être enregistrée.' }
+  if (reponse?.ok && reponse.code) {
+    return {
+      ok: true,
+      dejaInscrit: false,
+      code: reponse.code,
+      emailEnvoye: Boolean(reponse.emailEnvoye),
+      emailMessage: reponse.emailEnvoye ? undefined : reponse.message,
+    }
   }
 
-  let emailEnvoye = false
-  let emailMessage = ''
-  const envoi = await supabase.functions.invoke('inscrire', { body: formulaire })
-  const corps = envoi.data as { emailEnvoye?: boolean; message?: string } | null
-  if (!envoi.error && corps?.emailEnvoye) emailEnvoye = true
-  if (!emailEnvoye && corps?.message) emailMessage = corps.message
-
-  return {
-    ok: true,
-    code: reponse.code,
-    dejaInscrit: Boolean(reponse.deja_inscrit),
-    emailEnvoye,
-    emailMessage,
-  }
+  if (reponse?.message) return { ok: false, message: reponse.message }
+  if (error) return { ok: false, message: 'L’inscription n’a pas pu être enregistrée. Réessayez dans un instant.' }
+  return { ok: false, message: 'L’inscription n’a pas pu être enregistrée. Réessayez dans un instant.' }
 }
 
 export async function gererEquipe(

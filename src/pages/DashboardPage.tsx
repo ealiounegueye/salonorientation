@@ -75,6 +75,7 @@ export function DashboardPage() {
   }
 
   const maxProfil = stats ? Math.max(1, ...stats.parProfil.map((p) => p.count)) : 1
+  const maxSexe = stats ? Math.max(1, ...stats.parSexe.map((p) => p.count)) : 1
   const maxDate = stats ? Math.max(1, ...stats.parDate.map((d) => d.count)) : 1
 
   return (
@@ -171,7 +172,7 @@ export function DashboardPage() {
               </p>
             )}
 
-            <section className="grid gap-4 md:grid-cols-2">
+            <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               <article className="rounded-2xl border border-line bg-white p-4">
                 <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">Par profil</h2>
                 <div className="mt-4 space-y-3">
@@ -181,6 +182,14 @@ export function DashboardPage() {
                 </div>
               </article>
               <article className="rounded-2xl border border-line bg-white p-4">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">Par sexe</h2>
+                <div className="mt-4 space-y-3">
+                  {stats.parSexe.map((entree) => (
+                    <Barre key={entree.valeur} label={entree.libelle} value={entree.count} max={maxSexe} />
+                  ))}
+                </div>
+              </article>
+              <article className="rounded-2xl border border-line bg-white p-4 md:col-span-2 lg:col-span-1">
                 <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">Par date de venue</h2>
                 <div className="mt-4 space-y-3">
                   {stats.parDate.map((entree) => (

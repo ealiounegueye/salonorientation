@@ -3,7 +3,7 @@ import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import type { Participant, StatutParticipant } from '../types'
 import { evenement } from './evenement'
-import { formatQuand, filtreRecherche, libelleDates, libelleProfil, LIBELLE_STATUT } from './format'
+import { formatQuand, filtreRecherche, libelleDates, libelleProfil, libelleSexe, LIBELLE_STATUT } from './format'
 import type { StatsSalon } from './stats'
 import { supabase } from './supabase'
 
@@ -12,12 +12,11 @@ const ENTETES = [
   'Prénom',
   'Nom',
   'Âge',
+  'Sexe',
   'E-mail',
   'Téléphone',
   'Profil',
   'Dates',
-  'Organisation',
-  'Fonction',
   'Statut',
   'Inscrit le',
 ] as const
@@ -39,12 +38,11 @@ function lignesTableau(participants: Participant[]) {
     ligne.prenom,
     ligne.nom,
     ligne.age ?? '',
+    libelleSexe(ligne.sexe, true),
     ligne.email,
     ligne.telephone ?? '',
     libelleProfil(ligne.profil),
     libelleDates(ligne.dates),
-    ligne.organisation ?? '',
-    ligne.fonction ?? '',
     LIBELLE_STATUT[ligne.statut],
     formatQuand(ligne.created_at),
   ])
@@ -89,12 +87,11 @@ export function exporterExcel(participants: Participant[]) {
     { wch: 14 },
     { wch: 14 },
     { wch: 6 },
+    { wch: 6 },
     { wch: 28 },
     { wch: 14 },
     { wch: 18 },
     { wch: 16 },
-    { wch: 22 },
-    { wch: 18 },
     { wch: 10 },
     { wch: 18 },
   ]

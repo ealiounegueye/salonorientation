@@ -1,5 +1,8 @@
 project_id = "prpfinwafcgpypjajzaw"
 
+[auth]
+enable_signup = false
+
 [functions.inscrire]
 verify_jwt = false
 

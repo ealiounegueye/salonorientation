@@ -1,5 +1,5 @@
-import { codeAleatoire, envoyerBadge, type Participant } from '../_shared/badge.ts'
-import { clientService } from '../_shared/admin.ts'
+import { clientService, sessionEstAdmin } from '../_shared/admin.ts'
+import { envoyerBadge, type Participant } from '../_shared/badge.ts'
 import { json, preflight } from '../_shared/http.ts'
 
 type Corps = {
@@ -7,20 +7,63 @@ type Corps = {
   nom?: string
   email?: string
   telephone?: string
-  organisation?: string
-  fonction?: string
   profil?: string
   dates?: string
   age?: number | string
+  sexe?: string
   website?: string
 }
+
+type ReponseSql = {
+  ok?: boolean
+  message?: string
+  code?: string
+  id?: string
+  deja_inscrit?: boolean
+}
+
+const FENETRE_MS = 10 * 60 * 1000
+const PLAFOND_PUBLIC = 30
+const PLAFOND_ADMIN = 120
+const RENVOI_MS = 15 * 60 * 1000
+const MESSAGE_DEJA =
+  'Si cette adresse est déjà inscrite, le badge a été renvoyé par e-mail.'
 
 function texte(valeur: unknown, max: number) {
   return String(valeur ?? '').trim().slice(0, max)
 }
 
-function emailValide(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 160
+function ipClient(req: Request) {
+  const hops = (req.headers.get('x-forwarded-for') ?? '')
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => /^[0-9a-fA-F:.]+$/.test(part) && part.length <= 64)
+  return hops[0] ?? 'inconnue'
+}
+
+async function tropDeTentatives(ip: string, plafond: number) {
+  const admin = clientService()
+  const depuis = new Date(Date.now() - FENETRE_MS).toISOString()
+  const hier = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const insertion = await admin.from('inscription_tentatives').insert({ ip })
+  if (insertion.error) {
+    console.error(insertion.error)
+    return { bloque: true, message: 'L’inscription n’a pas pu être enregistrée.' }
+  }
+  await admin.from('inscription_tentatives').delete().lt('created_at', hier)
+  const { count, error } = await admin
+    .from('inscription_tentatives')
+    .select('id', { count: 'exact', head: true })
+    .eq('ip', ip)
+    .gte('created_at', depuis)
+  if (error) {
+    console.error(error)
+    return { bloque: true, message: 'L’inscription n’a pas pu être enregistrée.' }
+  }
+  if ((count ?? 0) > plafond) {
+    return { bloque: true, message: 'Trop de tentatives. Réessayez dans quelques minutes.' }
+  }
+  return { bloque: false, message: '' }
 }
 
 Deno.serve(async (req) => {
@@ -34,91 +77,73 @@ Deno.serve(async (req) => {
     return json({ ok: false, message: 'Formulaire illisible.' }, 400)
   }
 
-  if (texte(corps.website, 200)) {
-    return json({ ok: false, message: 'Inscription impossible.' }, 400)
-  }
+  const adminConnecte = await sessionEstAdmin(req)
+  const limite = await tropDeTentatives(ipClient(req), adminConnecte ? PLAFOND_ADMIN : PLAFOND_PUBLIC)
+  if (limite.bloque) return json({ ok: false, message: limite.message })
 
-  const prenom = texte(corps.prenom, 80)
-  const nom = texte(corps.nom, 80)
   const email = texte(corps.email, 160).toLowerCase()
-  const telephone = texte(corps.telephone, 30) || null
-  const organisation = texte(corps.organisation, 120) || null
-  const fonction = texte(corps.fonction, 120) || null
-  const profil = texte(corps.profil, 40).toLowerCase() || null
-  const dates = texte(corps.dates, 20) || null
   const ageBrut = typeof corps.age === 'number' ? corps.age : Number.parseInt(String(corps.age ?? ''), 10)
   const age = Number.isFinite(ageBrut) ? ageBrut : null
-
-  if (prenom.length < 2 || nom.length < 2) {
-    return json({ ok: false, message: 'Indiquez votre prénom et votre nom.' })
-  }
-  if (!emailValide(email)) {
-    return json({ ok: false, message: 'Indiquez une adresse e-mail valide.' })
-  }
-
   const admin = clientService()
-  const { data: campagne, error: erreurCampagne } = await admin.from('campagne').select('ouverte').eq('id', 1).maybeSingle()
-  if (erreurCampagne) {
-    console.error(erreurCampagne)
+  const { data, error } = await admin.rpc('inscrire', {
+    p_prenom: texte(corps.prenom, 80),
+    p_nom: texte(corps.nom, 80),
+    p_email: email,
+    p_telephone: texte(corps.telephone, 30),
+    p_website: texte(corps.website, 200),
+    p_profil: texte(corps.profil, 40),
+    p_dates: texte(corps.dates, 20),
+    p_age: age,
+    p_sexe: texte(corps.sexe, 1),
+    p_admin: adminConnecte,
+  })
+
+  if (error || !data) {
+    console.error(error)
     return json({ ok: false, message: 'L’inscription n’a pas pu être enregistrée.' }, 500)
   }
-  const { data: existant } = await admin
-    .from('participants')
-    .select('*')
-    .eq('email', email)
-    .maybeSingle()
 
-  if (existant?.statut === 'annule') {
-    return json({ ok: false, message: 'Cette inscription a été annulée. Contactez l’organisation.' })
+  const reponse = data as ReponseSql
+  if (!reponse.ok) {
+    return json({ ok: false, message: reponse.message ?? 'L’inscription n’a pas pu être enregistrée.' })
   }
 
-  let participant = existant as Participant | null
-  let dejaInscrit = Boolean(participant)
-
-  if (!participant) {
-    if (!campagne?.ouverte) {
-      return json({ ok: false, message: 'Les inscriptions sont fermées.' })
-    }
-
-    const ligne = { prenom, nom, email, telephone, organisation, fonction, profil, dates, age, statut: 'inscrit' }
-    for (let essai = 0; essai < 5; essai += 1) {
-      const { data, error } = await admin
-        .from('participants')
-        .insert({ ...ligne, code: codeAleatoire() })
-        .select('*')
-        .single()
-      if (!error && data) {
-        participant = data as Participant
-        break
-      }
-      if (error?.code === '23505') {
-        const { data: course } = await admin.from('participants').select('*').eq('email', email).maybeSingle()
-        if (course) {
-          participant = course as Participant
-          dejaInscrit = true
-          break
-        }
-        continue
-      }
-      console.error(error)
-      return json({ ok: false, message: 'L’inscription n’a pas pu être enregistrée.' }, 500)
-    }
+  if (!reponse.id) {
+    return json({ ok: false, message: 'L’inscription n’a pas pu être enregistrée.' }, 500)
   }
-
+  const { data: ligne } = await admin.from('participants').select('*').eq('id', reponse.id).maybeSingle()
+  const participant = ligne as Participant | null
   if (!participant) {
     return json({ ok: false, message: 'L’inscription n’a pas pu être enregistrée.' }, 500)
   }
 
-  const envoi = await envoyerBadge(participant)
-  if (envoi.emailEnvoye) {
-    await admin.from('participants').update({ email_envoye_at: new Date().toISOString() }).eq('id', participant.id)
+  const recent = Boolean(
+    participant.email_envoye_at &&
+      Date.now() - new Date(participant.email_envoye_at).getTime() < RENVOI_MS,
+  )
+  let emailEnvoye = recent
+  let emailMessage = recent ? 'Le badge a déjà été envoyé par e-mail.' : ''
+  if (!recent) {
+    const envoi = await envoyerBadge(participant)
+    emailEnvoye = envoi.emailEnvoye
+    emailMessage = envoi.emailEnvoye ? 'Badge envoyé.' : (envoi.emailErreur ?? 'Envoi impossible.')
+    if (envoi.emailEnvoye) {
+      await admin.from('participants').update({ email_envoye_at: new Date().toISOString() }).eq('id', participant.id)
+    }
+  }
+
+  if (reponse.deja_inscrit) {
+    const message = emailEnvoye
+      ? (recent ? 'Si cette adresse est déjà inscrite, le badge a déjà été envoyé par e-mail.' : MESSAGE_DEJA)
+      : 'Si cette adresse est déjà inscrite, le renvoi du badge n’a pas abouti. Réessayez dans un moment.'
+    return json({ ok: true, dejaInscrit: true, emailEnvoye, message })
   }
 
   return json({
     ok: true,
     code: participant.code,
-    dejaInscrit,
-    emailEnvoye: envoi.emailEnvoye,
-    message: envoi.emailEnvoye ? 'Badge envoyé.' : (envoi.emailErreur ?? 'Envoi impossible.'),
+    dejaInscrit: false,
+    emailEnvoye,
+    message: emailMessage,
   })
 })

@@ -1,6 +1,17 @@
-import type { ProfilParticipant, StatutParticipant } from '../types'
+import type { ProfilParticipant, SexeParticipant, StatutParticipant } from '../types'
 
 export const JOURS = ['18', '19', '20'] as const
+
+export const SEXES: { valeur: SexeParticipant; libelle: string; code: string }[] = [
+  { valeur: 'h', libelle: 'Homme', code: 'H' },
+  { valeur: 'f', libelle: 'Femme', code: 'F' },
+]
+
+export function libelleSexe(sexe: string | null | undefined, court = false) {
+  const entree = SEXES.find((item) => item.valeur === sexe)
+  if (!entree) return ''
+  return court ? entree.code : entree.libelle
+}
 
 export const PROFILS: { valeur: ProfilParticipant; libelle: string }[] = [
   { valeur: 'professionnel', libelle: 'Professionnel' },
@@ -35,8 +46,10 @@ export function nomComplet(personne: { prenom: string; nom: string }) {
   return `${personne.prenom} ${personne.nom}`
 }
 
+const CODE = /SDM-[A-F0-9]{32}|SDM-\d{6}|SLN-[A-Z0-9]{6}/
+
 export function extraireCode(valeur: string) {
-  const match = valeur.toUpperCase().match(/SDM-\d{6}|SLN-[A-Z0-9]{6}/)
+  const match = valeur.toUpperCase().match(CODE)
   return match?.[0] ?? null
 }
 
@@ -54,7 +67,6 @@ export function filtreRecherche(saisie: string) {
     `prenom.ilike.%${safe}%`,
     `email.ilike.%${safe}%`,
     `code.ilike.%${safe}%`,
-    `organisation.ilike.%${safe}%`,
     `telephone.ilike.%${safe}%`,
   ].join(',')
 }

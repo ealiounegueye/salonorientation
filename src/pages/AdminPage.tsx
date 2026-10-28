@@ -109,8 +109,8 @@ export function AdminPage() {
   }
 
   async function marquerPresent(brut: string) {
-    const valeur = extraireCode(brut) ?? brut.trim().toUpperCase()
-    if (!/^(SDM-\d{6}|SLN-[A-Z0-9]{6})$/.test(valeur)) {
+    const valeur = extraireCode(brut)
+    if (!valeur) {
       signaler(false, 'Code introuvable.')
       return
     }
@@ -231,10 +231,10 @@ export function AdminPage() {
                 setCode('')
                 void marquerPresent(lu)
               }}
-              placeholder="SDM-452675"
+              placeholder="Code du badge"
               autoComplete="off"
               onFocus={preparerSon}
-              className="w-full rounded-2xl border border-line bg-paper px-4 py-3 font-semibold tracking-[0.14em] outline-none ring-red/20 focus:ring-4"
+              className="w-full rounded-2xl border border-line bg-paper px-4 py-3 font-mono text-sm font-semibold outline-none ring-red/20 focus:ring-4"
             />
           </label>
         </form>
@@ -389,7 +389,7 @@ export function AdminPage() {
               <tbody>
                 {lignes.map((ligne) => (
                   <tr key={ligne.id} className="border-t border-line hover:bg-paper">
-                    <td className="px-4 py-3 font-semibold tracking-wide">
+                    <td className="max-w-[11rem] px-4 py-3 font-mono text-xs font-semibold break-all">
                       <Link to={`/admin/participants/${ligne.id}`} className="text-red">
                         {ligne.code}
                       </Link>
@@ -397,10 +397,7 @@ export function AdminPage() {
                     <td className="px-4 py-3">
                       <p className="font-medium">{nomComplet(ligne)}</p>
                       <p className="text-muted">
-                        {[libelleProfil(ligne.profil), libelleDates(ligne.dates, joursDispo)].filter(Boolean).join(' · ') ||
-                          ligne.organisation ||
-                          ligne.fonction ||
-                          '—'}
+                        {[libelleProfil(ligne.profil), libelleDates(ligne.dates, joursDispo)].filter(Boolean).join(' · ') || '—'}
                       </p>
                     </td>
                     <td className="px-4 py-3">

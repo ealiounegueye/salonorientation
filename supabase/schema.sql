@@ -31,8 +31,6 @@ create table if not exists public.participants (
   nom text not null,
   email text not null,
   telephone text,
-  organisation text,
-  fonction text,
   profil text,
   dates text,
   statut text not null default 'inscrit' check (statut in ('inscrit', 'present', 'annule')),
@@ -75,10 +73,17 @@ create index if not exists participants_profil_idx
 
 alter table public.participants add column if not exists profil text;
 alter table public.participants add column if not exists dates text;
+alter table public.participants drop column if exists organisation;
+alter table public.participants drop column if exists fonction;
 alter table public.participants add column if not exists age integer;
 alter table public.participants drop constraint if exists participants_age_check;
 alter table public.participants
   add constraint participants_age_check check (age is null or (age >= 16 and age <= 110));
+
+alter table public.participants add column if not exists sexe text;
+alter table public.participants drop constraint if exists participants_sexe_check;
+alter table public.participants
+  add constraint participants_sexe_check check (sexe is null or sexe in ('h', 'f'));
 
 alter table public.participants drop constraint if exists participants_profil_check;
 alter table public.participants
@@ -86,32 +91,13 @@ alter table public.participants
   check (profil is null or profil in ('professionnel', 'etudiant', 'chercheur', 'visiteur'));
 
 -- ---------------------------------------------------------------------------
--- Profil admin à la création d'un compte Auth
--- Les comptes se créent à la main. Ne pas ouvrir l'inscription publique Auth.
+-- Les comptes admin se créent depuis la page Équipe.
+-- Aucun trigger : un compte Auth créé autrement n'a pas de profil admin.
+-- Laisser les inscriptions Auth fermées (Authentication → Disable sign ups).
 -- ---------------------------------------------------------------------------
 
-create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  insert into public.profiles (id, nom, email, role)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data->>'nom', split_part(new.email, '@', 1)),
-    new.email,
-    'admin'
-  );
-  return new;
-end;
-$$;
-
 drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
+drop function if exists public.handle_new_user();
 
 -- ---------------------------------------------------------------------------
 -- Helpers
@@ -149,7 +135,7 @@ set search_path = public
 as $$
   select participants.code, participants.prenom, participants.nom, participants.statut
   from public.participants
-  where length(trim(coalesce(p_code, ''))) between 4 and 20
+  where upper(trim(coalesce(p_code, ''))) ~ '^(SDM-[A-F0-9]{32}|SDM-[0-9]{6}|SLN-[A-Z0-9]{6})$'
     and participants.code = upper(trim(p_code))
     and participants.statut <> 'annule'
   limit 1;
@@ -183,24 +169,45 @@ revoke all on function public.badge_public(text) from public, anon, authenticate
 grant execute on function public.badge_public(text) to anon, authenticated;
 
 -- ---------------------------------------------------------------------------
--- Inscription publique : crée le code SDM-000000, ou renvoie le badge existant
+-- Compteur d’appels à l’inscription. Réservé au rôle service, sans policy.
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.inscription_tentatives (
+  id bigint generated always as identity primary key,
+  ip text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists inscription_tentatives_ip_idx
+  on public.inscription_tentatives (ip, created_at desc);
+
+alter table public.inscription_tentatives enable row level security;
+revoke all on table public.inscription_tentatives from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Inscription : code long. Un e-mail déjà connu ne renvoie pas le code.
+-- Appelée uniquement par la fonction edge (service_role).
+-- p_admin n’est pris en compte que si l’appelant est service_role.
 -- ---------------------------------------------------------------------------
 
 drop function if exists public.inscrire(text, text, text, text, text, text, text);
 drop function if exists public.inscrire(text, text, text, text, text, text, text, text, text);
 drop function if exists public.inscrire(text, text, text, text, text, text, text, text, text, integer);
+drop function if exists public.inscrire(text, text, text, text, text, text, text, integer);
+drop function if exists public.inscrire(text, text, text, text, text, text, text, integer, boolean);
+drop function if exists public.inscrire(text, text, text, text, text, text, text, integer, text, boolean);
 
 create or replace function public.inscrire(
   p_prenom text,
   p_nom text,
   p_email text,
   p_telephone text default '',
-  p_organisation text default '',
-  p_fonction text default '',
   p_website text default '',
   p_profil text default '',
   p_dates text default '',
-  p_age integer default null
+  p_age integer default null,
+  p_sexe text default '',
+  p_admin boolean default false
 )
 returns jsonb
 language plpgsql
@@ -212,19 +219,18 @@ declare
   v_nom text := left(btrim(coalesce(p_nom, '')), 80);
   v_email text := lower(left(btrim(coalesce(p_email, '')), 160));
   v_telephone text := nullif(left(btrim(coalesce(p_telephone, '')), 30), '');
-  v_organisation text := nullif(left(btrim(coalesce(p_organisation, '')), 120), '');
-  v_fonction text := nullif(left(btrim(coalesce(p_fonction, '')), 120), '');
   v_website text := left(btrim(coalesce(p_website, '')), 200);
   v_profil text := lower(left(btrim(coalesce(p_profil, '')), 40));
   v_brut_dates text := regexp_replace(coalesce(p_dates, ''), '[^0-9,]', '', 'g');
   v_dates text;
   v_autorises text;
   v_ouverte boolean;
+  v_admin boolean := coalesce(p_admin, false) and coalesce(auth.jwt() ->> 'role', '') = 'service_role';
   v_row public.participants;
   v_code text;
   v_essai int;
-  v_i int;
   v_age int := p_age;
+  v_sexe text := lower(left(btrim(coalesce(p_sexe, '')), 1));
 begin
   if v_website <> '' then
     return jsonb_build_object('ok', false, 'message', 'Inscription impossible.');
@@ -244,6 +250,10 @@ begin
 
   if v_age is null or v_age < 16 or v_age > 110 then
     return jsonb_build_object('ok', false, 'message', 'Indiquez votre âge.');
+  end if;
+
+  if v_sexe not in ('h', 'f') then
+    return jsonb_build_object('ok', false, 'message', 'Indiquez votre sexe.');
   end if;
 
   if v_profil not in ('professionnel', 'etudiant', 'chercheur', 'visiteur') then
@@ -273,25 +283,22 @@ begin
     if v_row.statut = 'annule' then
       return jsonb_build_object('ok', false, 'message', 'Cette inscription a été annulée. Contactez l’organisation.');
     end if;
-    return jsonb_build_object('ok', true, 'code', v_row.code, 'deja_inscrit', true);
+    return jsonb_build_object('ok', true, 'deja_inscrit', true, 'id', v_row.id);
   end if;
 
   select coalesce((select ouverte from public.campagne where id = 1), false) into v_ouverte;
-  if not v_ouverte and not public.is_admin() then
+  if not v_ouverte and not v_admin and not public.is_admin() then
     return jsonb_build_object('ok', false, 'message', 'Les inscriptions sont fermées.');
   end if;
 
   for v_essai in 1..5 loop
-    v_code := 'SDM-';
-    for v_i in 1..6 loop
-      v_code := v_code || floor(random() * 10)::int;
-    end loop;
+    v_code := 'SDM-' || upper(encode(gen_random_bytes(16), 'hex'));
 
     begin
-      insert into public.participants (code, prenom, nom, email, telephone, organisation, fonction, profil, dates, age, statut)
-      values (v_code, v_prenom, v_nom, v_email, v_telephone, v_organisation, v_fonction, v_profil, v_dates, v_age, 'inscrit')
+      insert into public.participants (code, prenom, nom, email, telephone, profil, dates, age, sexe, statut)
+      values (v_code, v_prenom, v_nom, v_email, v_telephone, v_profil, v_dates, v_age, v_sexe, 'inscrit')
       returning * into v_row;
-      return jsonb_build_object('ok', true, 'code', v_row.code, 'deja_inscrit', false);
+      return jsonb_build_object('ok', true, 'code', v_row.code, 'deja_inscrit', false, 'id', v_row.id);
     exception
       when unique_violation then
         select * into v_row from public.participants where lower(email) = v_email limit 1;
@@ -299,7 +306,7 @@ begin
           if v_row.statut = 'annule' then
             return jsonb_build_object('ok', false, 'message', 'Cette inscription a été annulée. Contactez l’organisation.');
           end if;
-          return jsonb_build_object('ok', true, 'code', v_row.code, 'deja_inscrit', true);
+          return jsonb_build_object('ok', true, 'deja_inscrit', true, 'id', v_row.id);
         end if;
     end;
   end loop;
@@ -308,8 +315,8 @@ begin
 end;
 $$;
 
-revoke all on function public.inscrire(text, text, text, text, text, text, text, text, text, integer) from public, anon, authenticated;
-grant execute on function public.inscrire(text, text, text, text, text, text, text, text, text, integer) to anon, authenticated;
+revoke all on function public.inscrire(text, text, text, text, text, text, text, integer, text, boolean) from public, anon, authenticated;
+grant execute on function public.inscrire(text, text, text, text, text, text, text, integer, text, boolean) to service_role;
 
 -- ---------------------------------------------------------------------------
 -- RLS
@@ -350,3 +357,5 @@ drop policy if exists "participants_delete" on public.participants;
 create policy "participants_delete" on public.participants
   for delete to authenticated
   using (public.is_admin());
+
+notify pgrst, 'reload schema';

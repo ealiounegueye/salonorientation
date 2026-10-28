@@ -7,20 +7,11 @@ export type Participant = {
   nom: string
   email: string
   telephone: string | null
-  organisation: string | null
-  fonction: string | null
   statut: string
+  email_envoye_at?: string | null
 }
 
 const TITRE = 'Salon des Métiers'
-
-export function codeAleatoire() {
-  const bytes = new Uint8Array(6)
-  crypto.getRandomValues(bytes)
-  let corps = ''
-  for (const byte of bytes) corps += String(byte % 10)
-  return `SDM-${corps}`
-}
 
 function echapper(valeur: string) {
   return valeur
@@ -84,7 +75,7 @@ export async function envoyerBadge(participant: Participant) {
               </td>
             </tr>
             <tr>
-              <td align="center" style="padding:0 24px 8px;font-size:28px;letter-spacing:.18em;font-weight:700;">
+              <td align="center" style="padding:0 24px 8px;font-size:13px;letter-spacing:.04em;font-weight:700;word-break:break-all;">
                 ${code}
               </td>
             </tr>

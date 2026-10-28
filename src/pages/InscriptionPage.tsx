@@ -5,7 +5,7 @@ import { LogoSalon } from '../components/LogoSalon'
 import { inscrire, type FormulaireInscription } from '../lib/api'
 import { telechargerBadge } from '../lib/badgeImage'
 import { evenement } from '../lib/evenement'
-import { JOURS, PROFILS } from '../lib/format'
+import { JOURS, PROFILS, SEXES } from '../lib/format'
 import { lireParametres } from '../lib/parametres'
 import { isConfigured } from '../lib/supabase'
 
@@ -26,11 +26,10 @@ const vide: FormulaireInscription = {
   nom: '',
   email: '',
   telephone: '',
-  organisation: '',
-  fonction: '',
   profil: '',
   dates: '',
   age: '',
+  sexe: '',
   website: '',
 }
 
@@ -41,6 +40,7 @@ export function InscriptionPage() {
   const [joursDispo, setJoursDispo] = useState<string[]>([...JOURS])
   const [jours, setJours] = useState<string[]>([])
   const [erreur, setErreur] = useState<string | null>(null)
+  const [annonce, setAnnonce] = useState<string | null>(null)
   const [envoi, setEnvoi] = useState(false)
   const toutes = joursDispo.length > 0 && joursDispo.every((jour) => jours.includes(jour))
 
@@ -74,6 +74,7 @@ export function InscriptionPage() {
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     setErreur(null)
+    setAnnonce(null)
     const prenom = form.prenom.trim()
     const nom = form.nom.trim()
     const email = form.email.trim()
@@ -95,6 +96,10 @@ export function InscriptionPage() {
       setErreur('Indiquez votre âge (entre 16 et 110 ans).')
       return
     }
+    if (form.sexe !== 'h' && form.sexe !== 'f') {
+      setErreur('Indiquez votre sexe.')
+      return
+    }
     if (!PROFILS.some((entree) => entree.valeur === form.profil)) {
       setErreur('Choisissez votre profil.')
       return
@@ -111,8 +116,6 @@ export function InscriptionPage() {
       nom,
       email,
       telephone,
-      organisation: form.organisation.trim(),
-      fonction: form.fonction.trim(),
       profil: form.profil,
       dates,
       age: String(age),
@@ -120,6 +123,10 @@ export function InscriptionPage() {
     setEnvoi(false)
     if (!resultat.ok) {
       setErreur(resultat.message)
+      return
+    }
+    if (resultat.dejaInscrit) {
+      setAnnonce(resultat.message)
       return
     }
     await telechargerBadge({ code: resultat.code, prenom, nom })
@@ -227,6 +234,30 @@ export function InscriptionPage() {
             className={champ}
           />
         </label>
+        <fieldset>
+          <legend className="mb-1.5 block text-sm font-medium">
+            Sexe <span className="text-red">*</span>
+          </legend>
+          <div className="grid max-w-xs grid-cols-2 gap-2">
+            {SEXES.map((entree) => (
+              <label
+                key={entree.valeur}
+                className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-line px-3 py-3.5 text-sm font-semibold tracking-wide has-[:checked]:border-red has-[:checked]:bg-red/5"
+              >
+                <input
+                  type="radio"
+                  name="sexe"
+                  required
+                  value={entree.valeur}
+                  checked={form.sexe === entree.valeur}
+                  onChange={() => maj('sexe', entree.valeur)}
+                  className="size-4 accent-red"
+                />
+                {entree.code}
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <label className="block">
           {etiquette('Vous êtes', true)}
           <select required value={form.profil} onChange={(e) => maj('profil', e.target.value)} className={champ}>
@@ -267,6 +298,7 @@ export function InscriptionPage() {
           </label>
         </div>
         {erreur && <p className="text-sm font-medium text-red">{erreur}</p>}
+        {annonce && <p className="text-sm font-medium text-ink">{annonce}</p>}
         <button
           type="submit"
           disabled={formulaireBloque}

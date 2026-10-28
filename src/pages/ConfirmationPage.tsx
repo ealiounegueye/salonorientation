@@ -95,7 +95,7 @@ export function ConfirmationPage() {
         <div className="mt-8 flex flex-col items-center rounded-2xl border border-line bg-card p-6 text-center shadow-[0_16px_40px_rgba(224,0,26,0.08)]">
           <QrBadge value={codeAffiche} />
           <InfosLieu className="mt-2" />
-          <p className="mt-4 text-2xl font-semibold tracking-[0.18em]">{codeAffiche}</p>
+          <p className={`mt-4 font-semibold break-all ${codeAffiche.length > 16 ? 'font-mono text-sm' : 'text-2xl tracking-[0.18em]'}`}>{codeAffiche}</p>
           {nomAffiche && <p className="mt-2 text-lg">{nomAffiche}</p>}
           <p className="mt-4 text-sm font-medium text-ink">
             {vientDeSinscrire

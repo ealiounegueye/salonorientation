@@ -4,7 +4,7 @@ import { AppHeader } from '../components/AppHeader'
 import { InfosLieu } from '../components/InfosLieu'
 import { QrBadge } from '../components/QrBadge'
 import { renvoyerBadge } from '../lib/api'
-import { formatQuand, libelleDates, libelleProfil, LIBELLE_STATUT, nomComplet } from '../lib/format'
+import { formatQuand, libelleDates, libelleProfil, libelleSexe, LIBELLE_STATUT, nomComplet } from '../lib/format'
 import { supabase } from '../lib/supabase'
 import type { Participant, StatutParticipant } from '../types'
 
@@ -89,7 +89,7 @@ export function AdminParticipantPage() {
               <InfosLieu className="mt-2" />
             </div>
             <div>
-              <p className="text-sm font-semibold tracking-[0.18em] text-red">{participant.code}</p>
+              <p className="font-mono text-sm font-semibold break-all text-red">{participant.code}</p>
               <h2 className="mt-1 text-2xl font-semibold">{nomComplet(participant)}</h2>
               <dl className="mt-4 space-y-1 text-sm">
                 <div>
@@ -105,6 +105,10 @@ export function AdminParticipantPage() {
                   <dd className="inline">{participant.age ?? '—'}</dd>
                 </div>
                 <div>
+                  <dt className="inline text-muted">Sexe : </dt>
+                  <dd className="inline">{libelleSexe(participant.sexe) || '—'}</dd>
+                </div>
+                <div>
                   <dt className="inline text-muted">Profil : </dt>
                   <dd className="inline">{libelleProfil(participant.profil) || '—'}</dd>
                 </div>
@@ -112,18 +116,6 @@ export function AdminParticipantPage() {
                   <dt className="inline text-muted">Dates : </dt>
                   <dd className="inline">{libelleDates(participant.dates) || '—'}</dd>
                 </div>
-                {participant.organisation && (
-                  <div>
-                    <dt className="inline text-muted">Organisation : </dt>
-                    <dd className="inline">{participant.organisation}</dd>
-                  </div>
-                )}
-                {participant.fonction && (
-                  <div>
-                    <dt className="inline text-muted">Fonction : </dt>
-                    <dd className="inline">{participant.fonction}</dd>
-                  </div>
-                )}
                 <div>
                   <dt className="inline text-muted">Statut : </dt>
                   <dd className="inline">{LIBELLE_STATUT[participant.statut]}</dd>

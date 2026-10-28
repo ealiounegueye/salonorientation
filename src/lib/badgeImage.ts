@@ -36,7 +36,7 @@ export async function telechargerBadge(opts: { code: string; prenom: string; nom
   ctx.font = '700 42px Figtree, sans-serif'
   ctx.fillText('Salon des Métiers', 400, 148)
   ctx.drawImage(image, 90, 172, 620, 620)
-  ctx.font = '700 48px Figtree, sans-serif'
+  ctx.font = opts.code.length > 16 ? '700 22px Figtree, sans-serif' : '700 48px Figtree, sans-serif'
   ctx.fillText(opts.code, 400, 860)
   const nom = [opts.prenom, opts.nom].filter(Boolean).join(' ').trim()
   if (nom) {
