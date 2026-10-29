@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { CalendarDays, Cake, Mail, Phone, User, Users } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { BandeauAuchan } from '../components/BandeauAuchan'
 import { LogoSalon } from '../components/LogoSalon'
@@ -12,11 +13,19 @@ import { isConfigured } from '../lib/supabase'
 const champ =
   'w-full rounded-2xl border border-line bg-white px-4 py-3.5 outline-none ring-red/20 placeholder:text-muted/70 focus:border-red/40 focus:ring-4'
 
-function etiquette(texte: string, obligatoire = false) {
+function etiquette(
+  texte: string,
+  obligatoire = false,
+  Icone?: typeof User,
+  couleurIcone = 'text-red',
+) {
   return (
-    <span className="mb-1.5 block text-sm font-medium">
-      {texte}
-      {obligatoire ? <span className="text-red"> *</span> : null}
+    <span className="mb-1.5 flex items-center gap-2 text-sm font-medium">
+      {Icone ? <Icone className={`size-4 shrink-0 ${couleurIcone}`} aria-hidden /> : null}
+      <span>
+        {texte}
+        {obligatoire ? <span className="text-red"> *</span> : null}
+      </span>
     </span>
   )
 }
@@ -187,20 +196,20 @@ export function InscriptionPage() {
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
-            {etiquette('Prénom', true)}
+            {etiquette('Prénom', true, User)}
             <input required minLength={2} autoComplete="given-name" value={form.prenom} onChange={(e) => maj('prenom', e.target.value)} className={champ} />
           </label>
           <label className="block">
-            {etiquette('Nom', true)}
+            {etiquette('Nom', true, User)}
             <input required minLength={2} autoComplete="family-name" value={form.nom} onChange={(e) => maj('nom', e.target.value)} className={champ} />
           </label>
         </div>
         <label className="block">
-          {etiquette('E-mail', true)}
+          {etiquette('E-mail', true, Mail)}
           <input required type="email" autoComplete="email" value={form.email} onChange={(e) => maj('email', e.target.value)} className={champ} />
         </label>
         <label className="block">
-          {etiquette('Téléphone', true)}
+          {etiquette('Téléphone', true, Phone)}
           <input
             required
             type="text"
@@ -216,7 +225,7 @@ export function InscriptionPage() {
         </label>
         <div className="grid grid-cols-2 gap-4">
           <label className="block min-w-0">
-            {etiquette('Âge', true)}
+            {etiquette('Âge', true, Cake)}
             <input
               required
               type="text"
@@ -230,8 +239,11 @@ export function InscriptionPage() {
             />
           </label>
           <fieldset className="min-w-0">
-            <legend className="mb-1.5 block text-sm font-medium">
-              Sexe <span className="text-red">*</span>
+            <legend className="mb-1.5 flex items-center gap-2 text-sm font-medium">
+              <Users className="size-4 shrink-0 text-green" aria-hidden />
+              <span>
+                Sexe <span className="text-red">*</span>
+              </span>
             </legend>
             <div className="grid grid-cols-2 gap-2">
               {SEXES.map((entree) => (
@@ -255,7 +267,7 @@ export function InscriptionPage() {
           </fieldset>
         </div>
         <label className="block">
-          {etiquette('Vous êtes', true)}
+          {etiquette('Vous êtes', true, Users, 'text-green')}
           <select required value={form.profil} onChange={(e) => maj('profil', e.target.value)} className={champ}>
             <option value="">Choisir</option>
             {PROFILS.map((entree) => (
@@ -266,8 +278,11 @@ export function InscriptionPage() {
           </select>
         </label>
         <fieldset>
-          <legend className="mb-1.5 block text-sm font-medium">
-            Dates <span className="text-red">*</span>
+          <legend className="mb-1.5 flex items-center gap-2 text-sm font-medium">
+            <CalendarDays className="size-4 shrink-0 text-red" aria-hidden />
+            <span>
+              Dates <span className="text-red">*</span>
+            </span>
           </legend>
           <div className="grid grid-cols-3 gap-2">
             {joursDispo.map((jour) => (
