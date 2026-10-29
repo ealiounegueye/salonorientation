@@ -9,6 +9,8 @@ import { ConfirmationPage } from './pages/ConfirmationPage'
 import { InscriptionPage } from './pages/InscriptionPage'
 import { LoginPage } from './pages/LoginPage'
 import { ReglagesPage } from './pages/ReglagesPage'
+import { ComptePage } from './pages/ComptePage'
+import { ProtectedSuperAdmin } from './components/ProtectedSuperAdmin'
 
 export default function App() {
   return (
@@ -39,8 +41,16 @@ export default function App() {
               <Route
                 path="/admin/reglages"
                 element={
-                  <Protected>
+                  <ProtectedSuperAdmin>
                     <ReglagesPage />
+                  </ProtectedSuperAdmin>
+                }
+              />
+              <Route
+                path="/admin/compte"
+                element={
+                  <Protected>
+                    <ComptePage />
                   </Protected>
                 }
               />

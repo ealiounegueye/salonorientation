@@ -1,3 +1,4 @@
+import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 import type { ResultatEnvoi, ResultatInscription } from '../types'
 
@@ -35,14 +36,24 @@ export async function inscrire(formulaire: FormulaireInscription): Promise<Resul
   }
 
   if (reponse?.message) return { ok: false, message: reponse.message }
+
+  if (error instanceof FunctionsHttpError) {
+    try {
+      const corps = (await error.context.json()) as { message?: string }
+      if (corps?.message) return { ok: false, message: corps.message }
+    } catch {
+      /* corps illisible */
+    }
+  }
+
   if (error) return { ok: false, message: 'L’inscription n’a pas pu être enregistrée. Réessayez dans un instant.' }
   return { ok: false, message: 'L’inscription n’a pas pu être enregistrée. Réessayez dans un instant.' }
 }
 
 export async function gererEquipe(
   corps:
-    | { action: 'creer'; nom: string; email: string; password: string }
-    | { action: 'modifier'; id: string; nom: string; email: string }
+    | { action: 'creer'; nom: string; email: string; password: string; role?: 'admin' | 'super_admin' }
+    | { action: 'modifier'; id: string; nom: string; email: string; role?: 'admin' | 'super_admin' }
     | { action: 'reinitialiser'; id: string; password: string }
     | { action: 'retirer'; id: string },
 ): Promise<{ ok: boolean; message: string }> {

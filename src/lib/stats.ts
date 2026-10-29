@@ -48,8 +48,33 @@ export type StatsSalon = {
   agesRenseignes: number
 }
 
-export function calculerStats(participants: Participant[], jours: readonly string[] = JOURS): StatsSalon {
+export type OptionsCalculStats = {
+  /** Participants « inscrit » dans profil / sexe / date / âge. Défaut : true. */
+  inclureInscrits?: boolean
+  /** Participants « present » dans profil / sexe / date / âge. Défaut : true. */
+  inclurePresents?: boolean
+}
+
+function participantsPourGraphiques(
+  actifs: Participant[],
+  options?: OptionsCalculStats,
+): Participant[] {
+  const inclInscrits = options?.inclureInscrits ?? true
+  const inclPresents = options?.inclurePresents ?? true
+  return actifs.filter((p) => {
+    if (p.statut === 'inscrit') return inclInscrits
+    if (p.statut === 'present') return inclPresents
+    return false
+  })
+}
+
+export function calculerStats(
+  participants: Participant[],
+  jours: readonly string[] = JOURS,
+  options?: OptionsCalculStats,
+): StatsSalon {
   const actifs = participants.filter((p) => p.statut !== 'annule')
+  const pourGraphiques = participantsPourGraphiques(actifs, options)
   const inscrits = actifs.filter((p) => p.statut === 'inscrit').length
   const presents = actifs.filter((p) => p.statut === 'present').length
   const annules = participants.filter((p) => p.statut === 'annule').length
@@ -63,20 +88,20 @@ export function calculerStats(participants: Participant[], jours: readonly strin
   const parProfil = PROFILS.map((entree) => ({
     valeur: entree.valeur,
     libelle: entree.libelle,
-    count: actifs.filter((p) => p.profil === entree.valeur).length,
+    count: pourGraphiques.filter((p) => p.profil === entree.valeur).length,
   }))
 
   const parSexe = SEXES.map((entree) => ({
     valeur: entree.valeur,
     libelle: `${entree.code} — ${entree.libelle}`,
-    count: actifs.filter((p) => p.sexe === entree.valeur).length,
+    count: pourGraphiques.filter((p) => p.sexe === entree.valeur).length,
   }))
 
   const couleursJour = COULEURS_AUCHAN
   let selectionsDate = 0
   const parDate = jours.map((jour, index) => {
     let count = 0
-    for (const p of actifs) {
+    for (const p of pourGraphiques) {
       const sel = p.dates?.split(',').map((d) => d.trim()) ?? []
       if (sel.includes(jour)) count += 1
     }
@@ -95,7 +120,7 @@ export function calculerStats(participants: Participant[], jours: readonly strin
     '36-plus': 0,
   }
   let agesRenseignes = 0
-  for (const p of actifs) {
+  for (const p of pourGraphiques) {
     const tranche = trancheAge(p.age)
     if (!tranche) continue
     agesRenseignes += 1

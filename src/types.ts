@@ -1,4 +1,4 @@
-export type Role = 'admin'
+export type Role = 'super_admin' | 'admin'
 export type StatutParticipant = 'inscrit' | 'present' | 'annule'
 export type ProfilParticipant = 'professionnel' | 'etudiant' | 'chercheur' | 'visiteur'
 export type SexeParticipant = 'h' | 'f'

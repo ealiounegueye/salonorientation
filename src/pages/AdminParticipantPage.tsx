@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AppHeader } from '../components/AppHeader'
+import { BoiteConfirmation } from '../components/BoiteConfirmation'
 import { InfosLieu } from '../components/InfosLieu'
 import { QrBadge } from '../components/QrBadge'
 import { renvoyerBadge } from '../lib/api'
+import { useAuth } from '../context/AuthContext'
+import { peutSupprimerParticipant } from '../lib/permissions'
 import { formatQuand, libelleDates, libelleProfil, libelleSexe, LIBELLE_STATUT, nomComplet } from '../lib/format'
 import { supabase } from '../lib/supabase'
 import type { Participant, StatutParticipant } from '../types'
@@ -11,11 +14,14 @@ import type { Participant, StatutParticipant } from '../types'
 export function AdminParticipantPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
+  const { profile } = useAuth()
+  const peutSupprimer = peutSupprimerParticipant(profile?.role)
   const [participant, setParticipant] = useState<Participant | null>(null)
   const [introuvable, setIntrouvable] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [envoi, setEnvoi] = useState(false)
   const [suppression, setSuppression] = useState(false)
+  const [confirmSuppression, setConfirmSuppression] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -43,12 +49,9 @@ export function AdminParticipantPage() {
     if (data) setParticipant(data as Participant)
   }
 
-  async function supprimer() {
+  async function confirmerSuppression() {
     if (!participant || suppression) return
-    const confirme = window.confirm(
-      `Supprimer définitivement l’inscription de ${nomComplet(participant)} (${participant.code}) ?`,
-    )
-    if (!confirme) return
+    setConfirmSuppression(false)
     setSuppression(true)
     setMessage(null)
     const { error } = await supabase.from('participants').delete().eq('id', participant.id)
@@ -158,19 +161,33 @@ export function AdminParticipantPage() {
                     Réactiver
                   </button>
                 )}
-                <button
-                  type="button"
-                  disabled={suppression}
-                  onClick={() => void supprimer()}
-                  className="rounded-full border border-red px-4 py-2 text-sm font-medium text-red hover:bg-red/5 disabled:opacity-50"
-                >
-                  {suppression ? 'Suppression…' : 'Supprimer'}
-                </button>
+                {peutSupprimer && (
+                  <button
+                    type="button"
+                    disabled={suppression}
+                    onClick={() => setConfirmSuppression(true)}
+                    className="rounded-full border border-red px-4 py-2 text-sm font-medium text-red hover:bg-red/5 disabled:opacity-50"
+                  >
+                    {suppression ? 'Suppression…' : 'Supprimer'}
+                  </button>
+                )}
               </div>
             </div>
           </div>
         )}
       </main>
+      <BoiteConfirmation
+        ouverte={confirmSuppression && participant !== null}
+        titre="Supprimer cette inscription ?"
+        message={
+          participant
+            ? `L’inscription de ${nomComplet(participant)} (${participant.code}) sera définitivement effacée. Cette action est irréversible.`
+            : ''
+        }
+        confirmerLabel="Supprimer"
+        onConfirmer={() => void confirmerSuppression()}
+        onAnnuler={() => setConfirmSuppression(false)}
+      />
     </div>
   )
 }

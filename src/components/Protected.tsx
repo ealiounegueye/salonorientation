@@ -9,7 +9,7 @@ export function Protected({ children }: { children: ReactNode }) {
     return <div className="grid min-h-screen place-items-center text-muted">Chargement…</div>
   }
 
-  if (!session || !profile || profile.role !== 'admin') {
+  if (!session || !profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
     return <Navigate to="/admin/connexion" replace />
   }
 

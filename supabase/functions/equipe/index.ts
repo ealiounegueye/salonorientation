@@ -1,4 +1,4 @@
-import { exigerAdmin } from '../_shared/admin.ts'
+import { exigerSuperAdmin } from '../_shared/admin.ts'
 import { json, preflight } from '../_shared/http.ts'
 
 type Corps = {
@@ -6,7 +6,13 @@ type Corps = {
   nom?: string
   email?: string
   password?: string
+  role?: string
   id?: string
+}
+
+function roleAutorise(valeur: unknown): 'admin' | 'super_admin' {
+  const role = String(valeur ?? 'admin').trim()
+  return role === 'super_admin' ? 'super_admin' : 'admin'
 }
 
 function texte(valeur: unknown, max: number) {
@@ -17,7 +23,7 @@ Deno.serve(async (req) => {
   const refuse = preflight(req)
   if (refuse) return refuse
 
-  const acces = await exigerAdmin(req)
+  const acces = await exigerSuperAdmin(req)
   if ('erreur' in acces && acces.erreur) return acces.erreur
   const admin = acces.admin
   if (!admin || !('userId' in acces)) return json({ ok: false, message: 'Accès refusé.' }, 403)
@@ -49,11 +55,12 @@ Deno.serve(async (req) => {
       return json({ ok: false, message: deja ? 'Cet e-mail est déjà utilisé.' : 'Le compte n’a pas pu être créé.' })
     }
 
+    const role = roleAutorise(corps.role)
     await admin.from('profiles').upsert({
       id: data.user.id,
       nom,
       email,
-      role: 'admin',
+      role,
     })
     return json({ ok: true, message: `${nom} peut se connecter.` })
   }
@@ -75,7 +82,9 @@ Deno.serve(async (req) => {
       const deja = /already|exists|registered/i.test(error.message)
       return json({ ok: false, message: deja ? 'Cet e-mail est déjà utilisé.' : 'Le compte n’a pas pu être modifié.' })
     }
-    await admin.from('profiles').update({ nom, email }).eq('id', id)
+    const patch: { nom: string; email: string; role?: string } = { nom, email }
+    if (corps.role !== undefined) patch.role = roleAutorise(corps.role)
+    await admin.from('profiles').update(patch).eq('id', id)
     return json({ ok: true, message: 'Compte modifié.' })
   }
 

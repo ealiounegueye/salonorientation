@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Download, FileSpreadsheet, FileText, ScanLine, Users } from 'lucide-react'
 import { AppHeader } from '../components/AppHeader'
+import { BoiteConfirmation } from '../components/BoiteConfirmation'
 import { useAuth } from '../context/AuthContext'
 import { calculerStats, COULEURS_AUCHAN, type StatsSalon } from '../lib/stats'
 import { chargerParticipants, exporterCsv, exporterExcel, exporterPdf } from '../lib/export'
 import { lireParametres } from '../lib/parametres'
 import { supabase } from '../lib/supabase'
+import type { Participant } from '../types'
 function graduationsBarres(max: number) {
   if (max <= 5) return Array.from({ length: max + 1 }, (_, i) => max - i)
   const palier = Math.max(1, Math.ceil(max / 5))
@@ -95,11 +97,15 @@ function CarteKpi({ titre, valeur, detail, accent }: { titre: string; valeur: st
 
 export function DashboardPage() {
   const { configured } = useAuth()
+  const [participants, setParticipants] = useState<Participant[]>([])
   const [stats, setStats] = useState<StatsSalon | null>(null)
   const [ouverts, setOuverts] = useState(true)
   const [jours, setJours] = useState<string[]>(['18', '19', '20'])
   const [chargement, setChargement] = useState(true)
   const [exportEnCours, setExportEnCours] = useState(false)
+  const [graphInscrits, setGraphInscrits] = useState(true)
+  const [graphPresents, setGraphPresents] = useState(true)
+  const [confirmFermetureCampagne, setConfirmFermetureCampagne] = useState(false)
 
   const charger = useCallback(async () => {
     setChargement(true)
@@ -110,6 +116,7 @@ export function DashboardPage() {
     ])
     setJours(salon.jours)
     if (campagne.data) setOuverts(Boolean(campagne.data.ouverte))
+    setParticipants(liste)
     setStats(calculerStats(liste, salon.jours))
     setChargement(false)
   }, [])
@@ -119,11 +126,39 @@ export function DashboardPage() {
     void charger()
   }, [charger, configured])
 
-  async function basculerCampagne() {
+  function demanderBasculerCampagne() {
+    if (ouverts) {
+      setConfirmFermetureCampagne(true)
+      return
+    }
+    void appliquerBasculerCampagne()
+  }
+
+  async function appliquerBasculerCampagne() {
+    setConfirmFermetureCampagne(false)
     const suivante = !ouverts
     const { error } = await supabase.from('campagne').update({ ouverte: suivante }).eq('id', 1)
     if (!error) setOuverts(suivante)
   }
+
+  function basculerGraphInscrits(coche: boolean) {
+    if (!coche && !graphPresents) return
+    setGraphInscrits(coche)
+  }
+
+  function basculerGraphPresents(coche: boolean) {
+    if (!coche && !graphInscrits) return
+    setGraphPresents(coche)
+  }
+
+  const statsGraphiques = useMemo(
+    () =>
+      calculerStats(participants, jours, {
+        inclureInscrits: graphInscrits,
+        inclurePresents: graphPresents,
+      }),
+    [participants, jours, graphInscrits, graphPresents],
+  )
 
   async function exportFormat(format: 'csv' | 'xlsx' | 'pdf') {
     setExportEnCours(true)
@@ -135,9 +170,11 @@ export function DashboardPage() {
     setExportEnCours(false)
   }
 
-  const maxProfil = stats ? Math.max(1, ...stats.parProfil.map((p) => p.count)) : 1
-  const maxSexe = stats ? Math.max(1, ...stats.parSexe.map((p) => p.count)) : 1
-  const maxDate = stats ? Math.max(1, ...stats.parDate.map((d) => d.count)) : 1
+  const maxProfil = Math.max(1, ...statsGraphiques.parProfil.map((p) => p.count))
+  const maxSexe = Math.max(1, ...statsGraphiques.parSexe.map((p) => p.count))
+  const maxDate = Math.max(1, ...statsGraphiques.parDate.map((d) => d.count))
+  const nbGraphiques =
+    (graphInscrits ? stats?.inscrits ?? 0 : 0) + (graphPresents ? stats?.presents ?? 0 : 0)
 
   return (
     <div>
@@ -204,7 +241,7 @@ export function DashboardPage() {
             </div>
             <button
               type="button"
-              onClick={() => void basculerCampagne()}
+              onClick={() => demanderBasculerCampagne()}
               className="rounded-full bg-red px-4 py-2 text-sm font-semibold text-white hover:bg-red-dark"
             >
               {ouverts ? 'Fermer' : 'Ouvrir'}
@@ -233,11 +270,35 @@ export function DashboardPage() {
               </p>
             )}
 
+            <section className="rounded-2xl border border-line bg-white p-4">
+              <p className="text-sm font-semibold">Périmètre des graphiques</p>
+              <div className="mt-3 flex flex-wrap gap-4">
+                <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={graphInscrits}
+                    onChange={(event) => basculerGraphInscrits(event.target.checked)}
+                    className="size-4 rounded border-line text-red focus:ring-red/30"
+                  />
+                  Inscrits
+                </label>
+                <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={graphPresents}
+                    onChange={(event) => basculerGraphPresents(event.target.checked)}
+                    className="size-4 rounded border-line text-red focus:ring-red/30"
+                  />
+                  Présents
+                </label>
+              </div>
+            </section>
+
             <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               <article className="rounded-2xl border border-line bg-white p-4">
                 <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">Par profil</h2>
                 <div className="mt-4 space-y-3">
-                  {stats.parProfil.map((entree, index) => (
+                  {statsGraphiques.parProfil.map((entree, index) => (
                     <Barre
                       key={entree.valeur}
                       label={entree.libelle}
@@ -251,7 +312,7 @@ export function DashboardPage() {
               <article className="rounded-2xl border border-line bg-white p-4">
                 <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">Par sexe</h2>
                 <div className="mt-4 space-y-3">
-                  {stats.parSexe.map((entree, index) => (
+                  {statsGraphiques.parSexe.map((entree, index) => (
                     <Barre
                       key={entree.valeur}
                       label={entree.libelle}
@@ -265,11 +326,11 @@ export function DashboardPage() {
               <article className="rounded-2xl border border-line bg-white p-4 md:col-span-2 lg:col-span-1">
                 <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">Par date de venue</h2>
                 <p className="mt-1 text-xs text-muted">
-                  {stats.actifs} inscription{stats.actifs > 1 ? 's' : ''} active{stats.actifs > 1 ? 's' : ''} · un
-                  participant peut choisir plusieurs jours.
+                  {nbGraphiques} participant{nbGraphiques > 1 ? 's' : ''} dans ce périmètre · un participant peut
+                  choisir plusieurs jours.
                 </p>
                 <div className="mt-4 space-y-3">
-                  {stats.parDate.map((entree, index) => (
+                  {statsGraphiques.parDate.map((entree, index) => (
                     <Barre
                       key={entree.jour}
                       label={entree.libelle}
@@ -284,12 +345,12 @@ export function DashboardPage() {
 
             <section className="rounded-2xl border border-line bg-white p-4">
               <h2 className="text-base font-semibold text-ink">Répartition par tranche d&apos;âge</h2>
-              {stats.agesRenseignes === 0 ? (
-                <p className="mt-3 text-sm text-muted">Aucun âge renseigné pour le moment.</p>
+              {statsGraphiques.agesRenseignes === 0 ? (
+                <p className="mt-3 text-sm text-muted">Aucun âge renseigné pour ce périmètre.</p>
               ) : (
                 <>
                   <BarresColonnes
-                    data={stats.parAge.map((entree) => ({
+                    data={statsGraphiques.parAge.map((entree) => ({
                       cle: entree.id,
                       libelle: entree.libelle,
                       couleur: entree.couleur,
@@ -297,9 +358,10 @@ export function DashboardPage() {
                     }))}
                   />
                   <p className="mt-2 text-xs text-muted">
-                    {stats.agesRenseignes} participant{stats.agesRenseignes > 1 ? 's' : ''} avec âge renseigné
-                    {stats.actifs > stats.agesRenseignes
-                      ? ` · ${stats.actifs - stats.agesRenseignes} sans âge`
+                    {statsGraphiques.agesRenseignes} participant{statsGraphiques.agesRenseignes > 1 ? 's' : ''} avec
+                    âge renseigné
+                    {nbGraphiques > statsGraphiques.agesRenseignes
+                      ? ` · ${nbGraphiques - statsGraphiques.agesRenseignes} sans âge`
                       : ''}
                     .
                   </p>
@@ -309,6 +371,14 @@ export function DashboardPage() {
           </>
         )}
       </main>
+      <BoiteConfirmation
+        ouverte={confirmFermetureCampagne}
+        titre="Fermer la campagne ?"
+        message="Le formulaire public sera masqué. Les visiteurs ne pourront plus s’inscrire en ligne."
+        confirmerLabel="Fermer"
+        onConfirmer={() => void appliquerBasculerCampagne()}
+        onAnnuler={() => setConfirmFermetureCampagne(false)}
+      />
     </div>
   )
 }

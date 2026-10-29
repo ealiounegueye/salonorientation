@@ -23,7 +23,7 @@ export function LoginPage() {
     )
   }
 
-  if (session && profile?.role === 'admin') {
+  if (session && (profile?.role === 'admin' || profile?.role === 'super_admin')) {
     return <Navigate to="/admin" replace />
   }
 

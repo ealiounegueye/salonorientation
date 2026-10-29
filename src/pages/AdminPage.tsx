@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { FileSpreadsheet, FileText, ScanLine, Search, Trash2, UserPlus } from 'lucide-react'
+import { CalendarDays, FileSpreadsheet, FileText, ScanLine, Search, Trash2, UserPlus, Users } from 'lucide-react'
 import { AjoutParticipant } from '../components/AjoutParticipant'
 import { AppHeader } from '../components/AppHeader'
+import { BoiteConfirmation } from '../components/BoiteConfirmation'
 import { ScanPresence } from '../components/ScanPresence'
 import { useAuth } from '../context/AuthContext'
+import { peutSupprimerParticipant } from '../lib/permissions'
 import { chargerParticipants, exporterExcel, exporterPdf } from '../lib/export'
 import { calculerStats } from '../lib/stats'
 import { extraireCode, filtreRecherche, formatQuand, JOURS, libelleDates, libelleProfil, LIBELLE_STATUT, nomComplet, PROFILS } from '../lib/format'
@@ -21,7 +23,8 @@ const FILTRES: Array<{ id: 'tous' | StatutParticipant; label: string }> = [
 ]
 
 export function AdminPage() {
-  const { configured } = useAuth()
+  const { configured, profile } = useAuth()
+  const peutSupprimer = peutSupprimerParticipant(profile?.role)
   const [lignes, setLignes] = useState<Participant[]>([])
   const [total, setTotal] = useState(0)
   const [recherche, setRecherche] = useState('')
@@ -43,6 +46,7 @@ export function AdminPage() {
   const requeteListe = useRef(0)
   const son = useRef<AudioContext | null>(null)
   const flashTimer = useRef<number | null>(null)
+  const [aSupprimer, setASupprimer] = useState<Participant | null>(null)
 
   useEffect(() => {
     if (!configured) return
@@ -150,11 +154,10 @@ export function AdminPage() {
     await marquerPresent(valeur)
   }
 
-  async function supprimer(participant: Participant) {
-    const confirme = window.confirm(
-      `Supprimer définitivement l’inscription de ${nomComplet(participant)} (${participant.code}) ?`,
-    )
-    if (!confirme) return
+  async function confirmerSuppression() {
+    const participant = aSupprimer
+    if (!participant) return
+    setASupprimer(null)
     const { error } = await supabase.from('participants').delete().eq('id', participant.id)
     if (error) {
       signaler(false, 'La suppression n’a pas abouti.')
@@ -296,8 +299,11 @@ export function AdminPage() {
               </button>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2 border-b border-line px-4 py-3">
-            <span className="self-center text-xs font-semibold uppercase tracking-[0.14em] text-muted">Date</span>
+          <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
+            <span className="inline-flex items-center gap-2 self-center rounded-full border border-line bg-paper px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+              <CalendarDays className="size-4 shrink-0 text-red" aria-hidden />
+              Date
+            </span>
             <button
               type="button"
               onClick={() => {
@@ -330,8 +336,11 @@ export function AdminPage() {
               </button>
             ))}
           </div>
-          <div className="flex flex-wrap gap-2 border-b border-line px-4 py-3">
-            <span className="self-center text-xs font-semibold uppercase tracking-[0.14em] text-muted">Profil</span>
+          <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
+            <span className="inline-flex items-center gap-2 self-center rounded-full border border-line bg-paper px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+              <Users className="size-4 shrink-0 text-green" aria-hidden />
+              Profils
+            </span>
             <button
               type="button"
               onClick={() => {
@@ -396,8 +405,20 @@ export function AdminPage() {
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-medium">{nomComplet(ligne)}</p>
-                      <p className="text-muted">
-                        {[libelleProfil(ligne.profil), libelleDates(ligne.dates, joursDispo)].filter(Boolean).join(' · ') || '—'}
+                      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted">
+                        {libelleProfil(ligne.profil) ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <Users className="size-3.5 shrink-0 text-green" aria-hidden />
+                            {libelleProfil(ligne.profil)}
+                          </span>
+                        ) : null}
+                        {libelleDates(ligne.dates, joursDispo) ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <CalendarDays className="size-3.5 shrink-0 text-red" aria-hidden />
+                            {libelleDates(ligne.dates, joursDispo)}
+                          </span>
+                        ) : null}
+                        {!libelleProfil(ligne.profil) && !libelleDates(ligne.dates, joursDispo) ? '—' : null}
                       </p>
                     </td>
                     <td className="px-4 py-3">
@@ -407,14 +428,16 @@ export function AdminPage() {
                     <td className="px-4 py-3">{LIBELLE_STATUT[ligne.statut]}</td>
                     <td className="px-4 py-3 text-muted">{formatQuand(ligne.created_at)}</td>
                     <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => void supprimer(ligne)}
-                        aria-label={`Supprimer ${nomComplet(ligne)}`}
-                        className="rounded-full p-2 text-muted hover:bg-red/10 hover:text-red"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
+                      {peutSupprimer && (
+                        <button
+                          type="button"
+                          onClick={() => setASupprimer(ligne)}
+                          aria-label={`Supprimer ${nomComplet(ligne)}`}
+                          className="rounded-full p-2 text-muted hover:bg-red/10 hover:text-red"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -457,6 +480,18 @@ export function AdminPage() {
           </div>
         </section>
       </main>
+      <BoiteConfirmation
+        ouverte={aSupprimer !== null}
+        titre="Supprimer cette inscription ?"
+        message={
+          aSupprimer
+            ? `L’inscription de ${nomComplet(aSupprimer)} (${aSupprimer.code}) sera définitivement effacée. Cette action est irréversible.`
+            : ''
+        }
+        confirmerLabel="Supprimer"
+        onConfirmer={() => void confirmerSuppression()}
+        onAnnuler={() => setASupprimer(null)}
+      />
     </div>
   )
 }

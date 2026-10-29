@@ -11,7 +11,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   nom text not null,
   email text not null unique,
-  role text not null default 'admin' check (role = 'admin'),
+  role text not null default 'admin' check (role in ('admin', 'super_admin')),
   created_at timestamptz not null default now()
 );
 
@@ -116,7 +116,20 @@ set search_path = public
 as $$
   select exists (
     select 1 from public.profiles
-    where id = auth.uid() and role = 'admin'
+    where id = auth.uid() and role in ('admin', 'super_admin')
+  );
+$$;
+
+create or replace function public.is_super_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'super_admin'
   );
 $$;
 
@@ -305,7 +318,7 @@ begin
   end if;
 
   for v_essai in 1..5 loop
-    v_code := 'SDM-' || upper(encode(gen_random_bytes(16), 'hex'));
+    v_code := 'SDM-' || lpad((floor(random() * 1000000)::int)::text, 6, '0');
 
     begin
       insert into public.participants (code, prenom, nom, email, telephone, profil, dates, age, sexe, statut)
@@ -347,7 +360,7 @@ alter table public.participants enable row level security;
 drop policy if exists "profiles_select" on public.profiles;
 create policy "profiles_select" on public.profiles
   for select to authenticated
-  using (id = auth.uid() or public.is_admin());
+  using (id = auth.uid() or public.is_super_admin());
 
 drop policy if exists "campagne_select" on public.campagne;
 create policy "campagne_select" on public.campagne
@@ -357,8 +370,8 @@ create policy "campagne_select" on public.campagne
 drop policy if exists "campagne_update" on public.campagne;
 create policy "campagne_update" on public.campagne
   for update to authenticated
-  using (public.is_admin())
-  with check (public.is_admin());
+  using (public.is_super_admin())
+  with check (public.is_super_admin());
 
 drop policy if exists "participants_select" on public.participants;
 create policy "participants_select" on public.participants
@@ -374,6 +387,6 @@ create policy "participants_update" on public.participants
 drop policy if exists "participants_delete" on public.participants;
 create policy "participants_delete" on public.participants
   for delete to authenticated
-  using (public.is_admin());
+  using (public.is_super_admin());
 
 notify pgrst, 'reload schema';

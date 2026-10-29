@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { evenement } from '../lib/evenement'
+import { estSuperAdmin, libelleRole } from '../lib/permissions'
 import { LogoAuchan } from './LogoAuchan'
 
 export function AppHeader({ subtitle }: { subtitle: string }) {
@@ -10,6 +11,8 @@ export function AppHeader({ subtitle }: { subtitle: string }) {
   const dashboardActif = pathname === '/admin'
   const listeActive = pathname === '/admin/participants' || pathname.startsWith('/admin/participants/')
   const reglagesActifs = pathname === '/admin/reglages'
+  const compteActif = pathname === '/admin/compte'
+  const superAdmin = estSuperAdmin(profile?.role)
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
@@ -48,20 +51,33 @@ export function AppHeader({ subtitle }: { subtitle: string }) {
             >
               Participants
             </Link>
-            <Link
-              to="/admin/reglages"
-              className={
-                reglagesActifs
-                  ? 'rounded-full bg-red px-2.5 py-1.5 text-white sm:px-3'
-                  : 'rounded-full border border-line px-2.5 py-1.5 hover:border-red/40 sm:px-3'
-              }
-            >
-              Réglages
-            </Link>
+            {superAdmin ? (
+              <Link
+                to="/admin/reglages"
+                className={
+                  reglagesActifs
+                    ? 'rounded-full bg-red px-2.5 py-1.5 text-white sm:px-3'
+                    : 'rounded-full border border-line px-2.5 py-1.5 hover:border-red/40 sm:px-3'
+                }
+              >
+                Réglages
+              </Link>
+            ) : (
+              <Link
+                to="/admin/compte"
+                className={
+                  compteActif
+                    ? 'rounded-full bg-red px-2.5 py-1.5 text-white sm:px-3'
+                    : 'rounded-full border border-line px-2.5 py-1.5 hover:border-red/40 sm:px-3'
+                }
+              >
+                Mon compte
+              </Link>
+            )}
           </nav>
           <div className="hidden text-right sm:block">
             <p className="text-sm font-semibold">{profile?.nom}</p>
-            <p className="text-xs text-muted">Admin</p>
+            <p className="text-xs text-muted">{profile ? libelleRole(profile.role) : ''}</p>
           </div>
           <button
             type="button"

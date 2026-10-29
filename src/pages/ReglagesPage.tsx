@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { AppHeader } from '../components/AppHeader'
+import { BoiteConfirmation } from '../components/BoiteConfirmation'
 import { useAuth } from '../context/AuthContext'
 import { gererEquipe } from '../lib/api'
 import { lireParametres, normaliserJours } from '../lib/parametres'
 import { supabase } from '../lib/supabase'
-import type { Profile } from '../types'
+import type { Profile, Role } from '../types'
+import { libelleRole } from '../lib/permissions'
 
 const champ =
   'w-full rounded-2xl border border-line bg-paper px-4 py-3 outline-none ring-red/20 placeholder:text-muted/70 focus:ring-4'
@@ -20,15 +22,18 @@ export function ReglagesPage() {
   const [nom, setNom] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [roleNouveau, setRoleNouveau] = useState<Role>('admin')
   const [nouveauMdp, setNouveauMdp] = useState('')
   const [edition, setEdition] = useState<string | null>(null)
   const [editNom, setEditNom] = useState('')
   const [editEmail, setEditEmail] = useState('')
+  const [editRole, setEditRole] = useState<Role>('admin')
   const [resetId, setResetId] = useState<string | null>(null)
   const [resetMdp, setResetMdp] = useState('')
   const [message, setMessage] = useState<string | null>(null)
   const [messageOk, setMessageOk] = useState(true)
   const [envoi, setEnvoi] = useState(false)
+  const [confirmArretCampagne, setConfirmArretCampagne] = useState(false)
 
   const charger = useCallback(async () => {
     const [campagneRes, equipeRes] = await Promise.all([
@@ -55,7 +60,16 @@ export function ReglagesPage() {
     setMessage(texte)
   }
 
-  async function basculerCampagne() {
+  function demanderBasculerCampagne() {
+    if (ouverte) {
+      setConfirmArretCampagne(true)
+      return
+    }
+    void appliquerBasculerCampagne()
+  }
+
+  async function appliquerBasculerCampagne() {
+    setConfirmArretCampagne(false)
     const suivante = !ouverte
     const { error } = await supabase.from('campagne').update({ ouverte: suivante }).eq('id', 1)
     if (error) {
@@ -102,6 +116,7 @@ export function ReglagesPage() {
       nom: nom.trim(),
       email: email.trim().toLowerCase(),
       password,
+      role: roleNouveau,
     })
     setEnvoi(false)
     signaler(resultat.ok, resultat.message)
@@ -117,6 +132,7 @@ export function ReglagesPage() {
     setEdition(membre.id)
     setEditNom(membre.nom)
     setEditEmail(membre.email)
+    setEditRole(membre.role)
   }
 
   async function enregistrerEdition(event: FormEvent) {
@@ -128,6 +144,7 @@ export function ReglagesPage() {
       id: edition,
       nom: editNom.trim(),
       email: editEmail.trim().toLowerCase(),
+      role: editRole,
     })
     setEnvoi(false)
     signaler(resultat.ok, resultat.message)
@@ -190,7 +207,7 @@ export function ReglagesPage() {
             <p className="text-lg font-semibold">{ouverte ? 'Ouvertes' : 'Arrêtées'}</p>
             <button
               type="button"
-              onClick={() => void basculerCampagne()}
+              onClick={() => demanderBasculerCampagne()}
               className="rounded-full bg-red px-4 py-2 text-sm font-semibold text-white hover:bg-red-dark"
             >
               {ouverte ? 'Arrêter' : 'Ouvrir'}
@@ -237,6 +254,11 @@ export function ReglagesPage() {
 
         <section className="rounded-2xl border border-line bg-white p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Équipe</p>
+          <p className="mt-2 text-sm text-muted">
+            <strong className="font-medium text-ink">Admin</strong> : tableau de bord, participants, scan, exports, badges — sans
+            réglages salon ni gestion d’équipe. <strong className="font-medium text-ink">Super admin</strong> : tout, y compris
+            ouverture des inscriptions et suppression définitive.
+          </p>
           <ul className="mt-3 divide-y divide-line">
             {equipe.map((membre) => (
               <li key={membre.id} className="py-3">
@@ -246,7 +268,9 @@ export function ReglagesPage() {
                       {membre.nom}
                       {membre.id === profile?.id ? ' · vous' : ''}
                     </p>
-                    <p className="truncate text-sm text-muted">{membre.email}</p>
+                    <p className="truncate text-sm text-muted">
+                      {membre.email} · {libelleRole(membre.role)}
+                    </p>
                   </div>
                   <div className="flex shrink-0 flex-wrap justify-end gap-2">
                     <button
@@ -287,6 +311,17 @@ export function ReglagesPage() {
                     <label className="block">
                       <span className="mb-1.5 block text-sm font-medium">E-mail</span>
                       <input required type="email" value={editEmail} onChange={(event) => setEditEmail(event.target.value)} className={champ} />
+                    </label>
+                    <label className="block sm:col-span-2">
+                      <span className="mb-1.5 block text-sm font-medium">Rôle</span>
+                      <select
+                        value={editRole}
+                        onChange={(event) => setEditRole(event.target.value as Role)}
+                        className={champ}
+                      >
+                        <option value="admin">Admin</option>
+                        <option value="super_admin">Super admin</option>
+                      </select>
                     </label>
                     <button
                       type="submit"
@@ -346,6 +381,17 @@ export function ReglagesPage() {
                 className={champ}
               />
             </label>
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium">Rôle</span>
+              <select
+                value={roleNouveau}
+                onChange={(event) => setRoleNouveau(event.target.value as Role)}
+                className={champ}
+              >
+                <option value="admin">Admin</option>
+                <option value="super_admin">Super admin</option>
+              </select>
+            </label>
             <button
               type="submit"
               disabled={envoi}
@@ -381,6 +427,14 @@ export function ReglagesPage() {
           </form>
         </section>
       </main>
+      <BoiteConfirmation
+        ouverte={confirmArretCampagne}
+        titre="Arrêter les inscriptions ?"
+        message="Le formulaire public sera masqué. Les visiteurs ne pourront plus s’inscrire en ligne."
+        confirmerLabel="Arrêter"
+        onConfirmer={() => void appliquerBasculerCampagne()}
+        onAnnuler={() => setConfirmArretCampagne(false)}
+      />
     </div>
   )
 }
