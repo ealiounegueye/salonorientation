@@ -30,6 +30,24 @@ function datesValides(brut: string, autorises: string[]) {
   return ordre.length > 0 ? ordre.join(',') : null
 }
 
+function parseEmail(brut: string): { ok: true; value: string | null } | { ok: false; message: string } {
+  const email = brut.trim().toLowerCase()
+  if (!email) return { ok: true, value: null }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { ok: false, message: 'Indiquez une adresse e-mail valide ou laissez le champ vide.' }
+  }
+  return { ok: true, value: email.slice(0, 160) }
+}
+
+function parseTelephone(brut: string): { ok: true; value: string | null } | { ok: false; message: string } {
+  const telephone = brut.replace(/\D/g, '')
+  if (!telephone) return { ok: true, value: null }
+  if (!/^\d{8,15}$/.test(telephone)) {
+    return { ok: false, message: 'Indiquez un numéro de téléphone valide ou laissez le champ vide.' }
+  }
+  return { ok: true, value: telephone }
+}
+
 export async function inscrireParticipant(
   admin: SupabaseClient,
   champs: ChampsInscription,
@@ -38,19 +56,17 @@ export async function inscrireParticipant(
 
   const prenom = champs.prenom.trim()
   const nom = champs.nom.trim()
-  const email = champs.email.trim().toLowerCase()
-  const telephone = champs.telephone.replace(/\D/g, '')
+  const emailParse = parseEmail(champs.email)
+  if (!emailParse.ok) return emailParse
+  const email = emailParse.value
+  const telParse = parseTelephone(champs.telephone)
+  if (!telParse.ok) return telParse
+  const telephone = telParse.value
   const profil = champs.profil.trim().toLowerCase()
   const sexe = champs.sexe.trim().toLowerCase().slice(0, 1)
 
   if (prenom.length < 2 || nom.length < 2) {
     return { ok: false, message: 'Indiquez votre prénom et votre nom.' }
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { ok: false, message: 'Indiquez une adresse e-mail valide.' }
-  }
-  if (!/^\d{8,15}$/.test(telephone)) {
-    return { ok: false, message: 'Indiquez un numéro de téléphone.' }
   }
   if (champs.age < 16 || champs.age > 110) {
     return { ok: false, message: 'Indiquez votre âge.' }
@@ -79,22 +95,26 @@ export async function inscrireParticipant(
   const dates = datesValides(champs.datesBrut, joursAutorises)
   if (!dates) return { ok: false, message: 'Choisissez au moins une date.' }
 
-  const { data: parEmail } = await admin.from('participants').select('statut').ilike('email', email).maybeSingle()
-  if (parEmail) {
-    if (parEmail.statut === 'annule') {
-      return { ok: false, message: 'Cette inscription a été annulée. Contactez l’organisation.' }
+  if (email) {
+    const { data: parEmail } = await admin.from('participants').select('statut').ilike('email', email).maybeSingle()
+    if (parEmail) {
+      if (parEmail.statut === 'annule') {
+        return { ok: false, message: 'Cette inscription a été annulée. Contactez l’organisation.' }
+      }
+      return { ok: false, message: 'Cette adresse e-mail est déjà utilisée.' }
     }
-    return { ok: false, message: 'Cette adresse e-mail est déjà utilisée.' }
   }
 
-  const { data: parTel } = await admin
-    .from('participants')
-    .select('id')
-    .eq('telephone', telephone)
-    .neq('statut', 'annule')
-    .maybeSingle()
-  if (parTel) {
-    return { ok: false, message: 'Ce numéro de téléphone est déjà utilisé.' }
+  if (telephone) {
+    const { data: parTel } = await admin
+      .from('participants')
+      .select('id')
+      .eq('telephone', telephone)
+      .neq('statut', 'annule')
+      .maybeSingle()
+    if (parTel) {
+      return { ok: false, message: 'Ce numéro de téléphone est déjà utilisé.' }
+    }
   }
 
   if (!campagne?.ouverte && !champs.admin) {
@@ -104,7 +124,7 @@ export async function inscrireParticipant(
   const ligne = {
     prenom: prenom.slice(0, 80),
     nom: nom.slice(0, 80),
-    email: email.slice(0, 160),
+    email,
     telephone,
     profil,
     dates,
@@ -125,21 +145,25 @@ export async function inscrireParticipant(
     }
 
     if (error?.code === '23505') {
-      const { data: doublonEmail } = await admin.from('participants').select('statut').ilike('email', email).maybeSingle()
-      if (doublonEmail?.statut === 'annule') {
-        return { ok: false, message: 'Cette inscription a été annulée. Contactez l’organisation.' }
+      if (email) {
+        const { data: doublonEmail } = await admin.from('participants').select('statut').ilike('email', email).maybeSingle()
+        if (doublonEmail?.statut === 'annule') {
+          return { ok: false, message: 'Cette inscription a été annulée. Contactez l’organisation.' }
+        }
+        if (doublonEmail) {
+          return { ok: false, message: 'Cette adresse e-mail est déjà utilisée.' }
+        }
       }
-      if (doublonEmail) {
-        return { ok: false, message: 'Cette adresse e-mail est déjà utilisée.' }
-      }
-      const { data: doublonTel } = await admin
-        .from('participants')
-        .select('id')
-        .eq('telephone', telephone)
-        .neq('statut', 'annule')
-        .maybeSingle()
-      if (doublonTel) {
-        return { ok: false, message: 'Ce numéro de téléphone est déjà utilisé.' }
+      if (telephone) {
+        const { data: doublonTel } = await admin
+          .from('participants')
+          .select('id')
+          .eq('telephone', telephone)
+          .neq('statut', 'annule')
+          .maybeSingle()
+        if (doublonTel) {
+          return { ok: false, message: 'Ce numéro de téléphone est déjà utilisé.' }
+        }
       }
     }
     const msg = `${error?.message ?? ''} ${error?.details ?? ''}`.toLowerCase()

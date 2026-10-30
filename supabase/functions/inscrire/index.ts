@@ -103,9 +103,13 @@ Deno.serve(async (req) => {
     participant.email_envoye_at &&
       Date.now() - new Date(participant.email_envoye_at).getTime() < RENVOI_MS,
   )
+  const aEmail = Boolean(participant.email?.trim())
   let emailEnvoye = recent
   let emailMessage = recent ? 'Le badge a déjà été envoyé par e-mail.' : ''
-  if (!recent) {
+  if (!aEmail) {
+    emailEnvoye = false
+    emailMessage = ''
+  } else if (!recent) {
     try {
       const envoi = await envoyerBadge(participant)
       emailEnvoye = envoi.emailEnvoye

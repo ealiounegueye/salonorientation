@@ -16,7 +16,7 @@ export type Participant = {
   code: string
   prenom: string
   nom: string
-  email: string
+  email: string | null
   telephone: string | null
   profil: ProfilParticipant | null
   dates: string | null

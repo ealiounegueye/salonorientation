@@ -5,7 +5,7 @@ export type Participant = {
   code: string
   prenom: string
   nom: string
-  email: string
+  email: string | null
   telephone: string | null
   statut: string
   email_envoye_at?: string | null
@@ -23,6 +23,11 @@ function echapper(valeur: string) {
 }
 
 export async function envoyerBadge(participant: Participant) {
+  const destinataire = participant.email?.trim()
+  if (!destinataire) {
+    return { emailEnvoye: false, emailErreur: null }
+  }
+
   const apiKey = Deno.env.get('RESEND_API_KEY') ?? ''
   if (!apiKey) {
     return { emailEnvoye: false, emailErreur: 'RESEND_API_KEY manquante.' }
@@ -99,7 +104,7 @@ export async function envoyerBadge(participant: Participant) {
     },
     body: JSON.stringify({
       from,
-      to: [participant.email],
+      to: [destinataire],
       subject: `Votre badge d’accès — ${TITRE}`,
       html,
       attachments: [

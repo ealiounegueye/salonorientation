@@ -31,6 +31,13 @@ create index if not exists inscription_tentatives_ip_idx
 alter table public.inscription_tentatives enable row level security;
 revoke all on table public.inscription_tentatives from public, anon, authenticated;
 
+alter table public.participants alter column email drop not null;
+
+drop index if exists public.participants_email_lower_idx;
+create unique index if not exists participants_email_lower_idx
+  on public.participants (lower(email))
+  where email is not null and btrim(email) <> '';
+
 -- --- Fonction inscrire (copie de schema.sql) ---
 
 drop function if exists public.inscrire(text, text, text, text, text, text, text);
@@ -60,8 +67,8 @@ as $$
 declare
   v_prenom text := left(btrim(coalesce(p_prenom, '')), 80);
   v_nom text := left(btrim(coalesce(p_nom, '')), 80);
-  v_email text := lower(left(btrim(coalesce(p_email, '')), 160));
-  v_telephone text := nullif(left(btrim(coalesce(p_telephone, '')), 30), '');
+  v_email text := nullif(lower(left(btrim(coalesce(p_email, '')), 160)), '');
+  v_telephone text := nullif(left(nullif(regexp_replace(coalesce(p_telephone, ''), '[^0-9]', '', 'g'), ''), 15), '');
   v_website text := left(btrim(coalesce(p_website, '')), 200);
   v_profil text := lower(left(btrim(coalesce(p_profil, '')), 40));
   v_brut_dates text := regexp_replace(coalesce(p_dates, ''), '[^0-9,]', '', 'g');
@@ -83,12 +90,12 @@ begin
     return jsonb_build_object('ok', false, 'message', 'Indiquez votre prénom et votre nom.');
   end if;
 
-  if v_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' then
-    return jsonb_build_object('ok', false, 'message', 'Indiquez une adresse e-mail valide.');
+  if v_email is not null and v_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' then
+    return jsonb_build_object('ok', false, 'message', 'Indiquez une adresse e-mail valide ou laissez le champ vide.');
   end if;
 
-  if v_telephone is null or v_telephone !~ '^[0-9]{8,15}$' then
-    return jsonb_build_object('ok', false, 'message', 'Indiquez un numéro de téléphone.');
+  if v_telephone is not null and v_telephone !~ '^[0-9]{8,15}$' then
+    return jsonb_build_object('ok', false, 'message', 'Indiquez un numéro de téléphone valide ou laissez le champ vide.');
   end if;
 
   if v_age is null or v_age < 16 or v_age > 110 then
@@ -117,25 +124,29 @@ begin
     return jsonb_build_object('ok', false, 'message', 'Choisissez au moins une date.');
   end if;
 
-  select * into v_row
-  from public.participants
-  where lower(email) = v_email
-  limit 1;
+  if v_email is not null then
+    select * into v_row
+    from public.participants
+    where lower(email) = v_email
+    limit 1;
 
-  if found then
-    if v_row.statut = 'annule' then
-      return jsonb_build_object('ok', false, 'message', 'Cette inscription a été annulée. Contactez l’organisation.');
+    if found then
+      if v_row.statut = 'annule' then
+        return jsonb_build_object('ok', false, 'message', 'Cette inscription a été annulée. Contactez l’organisation.');
+      end if;
+      return jsonb_build_object('ok', false, 'message', 'Cette adresse e-mail est déjà utilisée.');
     end if;
-    return jsonb_build_object('ok', false, 'message', 'Cette adresse e-mail est déjà utilisée.');
   end if;
 
-  select * into v_row
-  from public.participants
-  where telephone = v_telephone and statut <> 'annule'
-  limit 1;
+  if v_telephone is not null then
+    select * into v_row
+    from public.participants
+    where telephone = v_telephone and statut <> 'annule'
+    limit 1;
 
-  if found then
-    return jsonb_build_object('ok', false, 'message', 'Ce numéro de téléphone est déjà utilisé.');
+    if found then
+      return jsonb_build_object('ok', false, 'message', 'Ce numéro de téléphone est déjà utilisé.');
+    end if;
   end if;
 
   select coalesce((select ouverte from public.campagne where id = 1), false) into v_ouverte;
@@ -153,13 +164,13 @@ begin
       return jsonb_build_object('ok', true, 'code', v_row.code, 'deja_inscrit', false, 'id', v_row.id);
     exception
       when unique_violation then
-        if exists (
+        if v_email is not null and exists (
           select 1 from public.participants
           where lower(email) = v_email and statut <> 'annule'
         ) then
           return jsonb_build_object('ok', false, 'message', 'Cette adresse e-mail est déjà utilisée.');
         end if;
-        if exists (
+        if v_telephone is not null and exists (
           select 1 from public.participants
           where telephone = v_telephone and statut <> 'annule'
         ) then

@@ -41,9 +41,15 @@ export function AjoutParticipant({ onCree }: { onCree: () => void }) {
       setMessage('Indiquez le prénom et le nom.')
       return
     }
-    if (!/^\d{8,15}$/.test(tel)) {
+    const mail = email.trim()
+    if (mail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
       setOk(false)
-      setMessage('Indiquez un numéro de téléphone.')
+      setMessage('Indiquez un e-mail valide ou laissez le champ vide.')
+      return
+    }
+    if (tel && !/^\d{8,15}$/.test(tel)) {
+      setOk(false)
+      setMessage('Indiquez un numéro valide ou laissez le champ vide.')
       return
     }
     const ageNum = Number.parseInt(age, 10)
@@ -66,7 +72,7 @@ export function AjoutParticipant({ onCree }: { onCree: () => void }) {
     const resultat = await inscrire({
       prenom: prenom.trim(),
       nom: nom.trim(),
-      email: email.trim(),
+      email: mail,
       telephone: tel,
       profil,
       dates: jours.join(','),
@@ -105,12 +111,11 @@ export function AjoutParticipant({ onCree }: { onCree: () => void }) {
       </label>
       <label className="block">
         <span className="mb-1.5 block text-sm font-medium">E-mail</span>
-        <input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={champ} />
+        <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={champ} />
       </label>
       <label className="block">
         <span className="mb-1.5 block text-sm font-medium">Téléphone</span>
         <input
-          required
           inputMode="numeric"
           value={telephone}
           onChange={(event) => setTelephone(event.target.value.replace(/\D/g, '').slice(0, 15))}

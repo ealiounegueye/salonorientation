@@ -27,7 +27,7 @@ export function ConfirmationPage() {
   const [badge, setBadge] = useState<BadgePublic | null>(null)
   const [introuvable, setIntrouvable] = useState(false)
   const [telechargement, setTelechargement] = useState(false)
-  const vientDeSinscrire = Boolean(etat.email)
+  const vientDeSinscrire = Boolean(etat.prenom && etat.nom)
   const codeAffiche = (badge?.code ?? (vientDeSinscrire ? code : '')).toUpperCase()
   const nomAffiche = badge ? nomComplet(badge) : [etat.prenom, etat.nom].filter(Boolean).join(' ')
 

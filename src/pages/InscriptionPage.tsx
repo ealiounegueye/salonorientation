@@ -90,12 +90,12 @@ export function InscriptionPage() {
       setErreur('Indiquez votre prénom et votre nom.')
       return
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setErreur('Indiquez une adresse e-mail valide.')
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setErreur('Indiquez une adresse e-mail valide ou laissez le champ vide.')
       return
     }
-    if (!/^\d{8,15}$/.test(telephone)) {
-      setErreur('Indiquez un numéro de téléphone, sans lettres.')
+    if (telephone && !/^\d{8,15}$/.test(telephone)) {
+      setErreur('Indiquez un numéro de téléphone valide ou laissez le champ vide.')
       return
     }
     const age = Number.parseInt(form.age, 10)
@@ -205,18 +205,15 @@ export function InscriptionPage() {
           </label>
         </div>
         <label className="block">
-          {etiquette('E-mail', true, Mail)}
-          <input required type="email" autoComplete="email" value={form.email} onChange={(e) => maj('email', e.target.value)} className={champ} />
+          {etiquette('E-mail', false, Mail)}
+          <input type="email" autoComplete="email" value={form.email} onChange={(e) => maj('email', e.target.value)} className={champ} />
         </label>
         <label className="block">
-          {etiquette('Téléphone', true, Phone)}
+          {etiquette('Téléphone', false, Phone)}
           <input
-            required
             type="text"
             inputMode="numeric"
             autoComplete="tel"
-            pattern="[0-9]{8,15}"
-            minLength={8}
             maxLength={15}
             value={form.telephone}
             onChange={(e) => maj('telephone', chiffres(e.target.value))}
