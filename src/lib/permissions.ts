@@ -46,7 +46,7 @@ export function peutExporterParticipants(role: Role | undefined | null): boolean
 }
 
 export function peutAjouterParticipant(role: Role | undefined | null): boolean {
-  return estBackoffice(role)
+  return estStaff(role)
 }
 
 export function peutGererFicheParticipant(role: Role | undefined | null): boolean {

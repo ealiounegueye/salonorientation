@@ -255,7 +255,8 @@ export function ReglagesPage() {
         <section className="rounded-2xl border border-line bg-white p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Équipe</p>
           <p className="mt-2 text-sm text-muted">
-            <strong className="font-medium text-ink">Hôtesse</strong> : page participants et scan uniquement.{' '}
+            <strong className="font-medium text-ink">Hôtesse</strong> : participants, scan et ajout manuel — sans tableau de
+            bord ni exports.{' '}
             <strong className="font-medium text-ink">Admin</strong> : tableau de bord, exports, badges — sans réglages ni
             équipe. <strong className="font-medium text-ink">Super admin</strong> : tout.
           </p>

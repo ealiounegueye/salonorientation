@@ -1,7 +1,8 @@
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.116.0'
 import { json } from './http.ts'
 
-export type RoleStaff = 'admin' | 'super_admin'
+export type RoleBackoffice = 'admin' | 'super_admin'
+export type RoleStaff = RoleBackoffice | 'hotesse'
 
 export function clientService(): SupabaseClient {
   const url = Deno.env.get('SUPABASE_URL') ?? ''
@@ -31,6 +32,30 @@ export async function exigerStaff(req: Request) {
     return { erreur: json({ ok: false, message: 'Accès refusé.' }, 403) }
   }
 
+  return { admin, userId: data.user.id, role: role as RoleBackoffice }
+}
+
+/** Admin, super admin ou hôtesse (scan, ajout manuel). */
+export async function exigerAccesParticipants(req: Request) {
+  const url = Deno.env.get('SUPABASE_URL') ?? ''
+  const anon = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+  const authHeader = req.headers.get('Authorization') ?? ''
+  const userClient = createClient(url, anon, {
+    global: { headers: { Authorization: authHeader } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  const { data } = await userClient.auth.getUser()
+  if (!data.user) {
+    return { erreur: json({ ok: false, message: 'Connexion requise.' }, 401) }
+  }
+
+  const admin = clientService()
+  const { data: profile } = await admin.from('profiles').select('role').eq('id', data.user.id).maybeSingle()
+  const role = profile?.role
+  if (role !== 'admin' && role !== 'super_admin' && role !== 'hotesse') {
+    return { erreur: json({ ok: false, message: 'Accès refusé.' }, 403) }
+  }
+
   return { admin, userId: data.user.id, role: role as RoleStaff }
 }
 
@@ -49,6 +74,6 @@ export async function exigerSuperAdmin(req: Request) {
 }
 
 export async function sessionEstAdmin(req: Request) {
-  const acces = await exigerStaff(req)
+  const acces = await exigerAccesParticipants(req)
   return Boolean('admin' in acces && acces.admin)
 }
