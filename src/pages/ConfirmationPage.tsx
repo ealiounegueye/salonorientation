@@ -9,6 +9,7 @@ import { evenement } from '../lib/evenement'
 import { nomComplet } from '../lib/format'
 import { isConfigured, supabase } from '../lib/supabase'
 import type { BadgePublic } from '../types'
+import urlTdr from '../TDR Salon des Métiers et Associations 2026 auch.pdf?url'
 
 type EtatNavigation = {
   emailEnvoye?: boolean
@@ -120,11 +121,18 @@ export function ConfirmationPage() {
 
       {isConfigured && !codeAffiche && !introuvable && <p className="mt-6 text-sm text-muted">Chargement du badge…</p>}
 
-      <p className="mt-6 text-sm">
-        <Link to="/" className="font-medium text-ink underline-offset-4 hover:underline">
+      <div className="mt-6 flex flex-row flex-wrap items-center justify-center gap-4 text-sm">
+        <Link to="/" className="shrink-0 font-medium text-ink underline-offset-4 hover:underline">
           Nouvelle inscription
         </Link>
-      </p>
+        <a
+          href={urlTdr}
+          download="TDR-Salon-des-Metiers-et-Associations-2026-Auchan.pdf"
+          className="shrink-0 rounded-full border border-line bg-white px-5 py-2.5 text-sm font-semibold text-ink shadow-sm hover:bg-paper"
+        >
+          Télécharger le TDR
+        </a>
+      </div>
     </BandeauAuchan>
   )
 }
