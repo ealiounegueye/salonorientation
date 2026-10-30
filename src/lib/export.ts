@@ -17,6 +17,7 @@ const ENTETES = [
   'Téléphone',
   'Profil',
   'Dates',
+  'Jours présents',
   'Statut',
   'Inscrit le',
 ] as const
@@ -43,6 +44,7 @@ function lignesTableau(participants: Participant[]) {
     ligne.telephone ?? '',
     libelleProfil(ligne.profil),
     libelleDates(ligne.dates),
+    libelleDates(ligne.jours_presents?.length ? ligne.jours_presents.join(',') : null),
     LIBELLE_STATUT[ligne.statut],
     formatQuand(ligne.created_at),
   ])

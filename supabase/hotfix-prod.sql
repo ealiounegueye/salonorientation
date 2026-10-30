@@ -19,6 +19,11 @@ create unique index if not exists participants_telephone_actif_idx
   on public.participants (telephone)
   where telephone is not null and statut <> 'annule';
 
+alter table public.participants add column if not exists jours_presents text[] not null default '{}';
+
+create index if not exists participants_jours_presents_idx
+  on public.participants using gin (jours_presents);
+
 create table if not exists public.inscription_tentatives (
   id bigint generated always as identity primary key,
   ip text not null,

@@ -73,6 +73,11 @@ alter table public.participants
 create index if not exists participants_jours_sel_idx
   on public.participants using gin (jours_sel);
 
+alter table public.participants add column if not exists jours_presents text[] not null default '{}';
+
+create index if not exists participants_jours_presents_idx
+  on public.participants using gin (jours_presents);
+
 create index if not exists participants_profil_idx
   on public.participants (profil);
 

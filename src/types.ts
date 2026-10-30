@@ -23,6 +23,7 @@ export type Participant = {
   age: number | null
   sexe: SexeParticipant | null
   statut: StatutParticipant
+  jours_presents: string[]
   email_envoye_at: string | null
   created_at: string
 }

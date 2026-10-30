@@ -1,5 +1,6 @@
 import type { Participant } from '../types'
 import { JOURS, PROFILS, SEXES } from './format'
+import { joursPourStatsPresence } from './presence'
 
 const dateurJour = new Intl.DateTimeFormat('fr-CA', {
   timeZone: 'Africa/Dakar',
@@ -98,12 +99,19 @@ export function calculerStats(
   }))
 
   const couleursJour = COULEURS_AUCHAN
+  const inclInscrits = options?.inclureInscrits ?? true
+  const inclPresents = options?.inclurePresents ?? true
   let selectionsDate = 0
   const parDate = jours.map((jour, index) => {
     let count = 0
-    for (const p of pourGraphiques) {
-      const sel = p.dates?.split(',').map((d) => d.trim()) ?? []
-      if (sel.includes(jour)) count += 1
+    for (const p of actifs) {
+      if (p.statut === 'inscrit' && inclInscrits) {
+        const sel = p.dates?.split(',').map((d) => d.trim()) ?? []
+        if (sel.includes(jour)) count += 1
+      }
+      if (p.statut === 'present' && inclPresents) {
+        if (joursPourStatsPresence(p).includes(jour)) count += 1
+      }
     }
     selectionsDate += count
     return {

@@ -324,10 +324,10 @@ export function DashboardPage() {
                 </div>
               </article>
               <article className="rounded-2xl border border-line bg-white p-4 md:col-span-2 lg:col-span-1">
-                <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">Par date de venue</h2>
+                <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">Par jour du salon</h2>
                 <p className="mt-1 text-xs text-muted">
-                  {nbGraphiques} participant{nbGraphiques > 1 ? 's' : ''} dans ce périmètre · un participant peut
-                  choisir plusieurs jours.
+                  Inscrits : dates choisies à l’inscription · Présents : jours réellement pointés au scan (
+                  {nbGraphiques} dans le périmètre).
                 </p>
                 <div className="mt-4 space-y-3">
                   {statsGraphiques.parDate.map((entree, index) => (

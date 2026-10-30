@@ -8,6 +8,8 @@ import { renvoyerBadge } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import { peutGererFicheParticipant, peutSupprimerParticipant } from '../lib/permissions'
 import { formatQuand, libelleDates, libelleProfil, libelleSexe, LIBELLE_STATUT, nomComplet } from '../lib/format'
+import { jourSalonDakar, joursPresentsApresScan, normaliserJoursPresents } from '../lib/presence'
+import { lireParametres } from '../lib/parametres'
 import { supabase } from '../lib/supabase'
 import type { Participant, StatutParticipant } from '../types'
 
@@ -46,7 +48,20 @@ export function AdminParticipantPage() {
 
   async function changerStatut(statut: StatutParticipant) {
     if (!participant) return
-    const { data } = await supabase.from('participants').update({ statut }).eq('id', participant.id).select('*').single()
+    let patch: { statut: StatutParticipant; jours_presents?: string[] } = { statut }
+    if (statut === 'present') {
+      const salon = await lireParametres(true)
+      const jour = jourSalonDakar(salon.jours) ?? salon.jours[0]
+      if (jour) {
+        patch = {
+          statut: 'present',
+          jours_presents: joursPresentsApresScan(participant.jours_presents, jour),
+        }
+      }
+    } else if (statut === 'inscrit') {
+      patch = { statut: 'inscrit', jours_presents: [] }
+    }
+    const { data } = await supabase.from('participants').update(patch).eq('id', participant.id).select('*').single()
     if (data) setParticipant(data as Participant)
   }
 
@@ -119,6 +134,14 @@ export function AdminParticipantPage() {
                 <div>
                   <dt className="inline text-muted">Dates : </dt>
                   <dd className="inline">{libelleDates(participant.dates) || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="inline text-muted">Présence (scan) : </dt>
+                  <dd className="inline">
+                    {normaliserJoursPresents(participant.jours_presents).length
+                      ? libelleDates(normaliserJoursPresents(participant.jours_presents).join(','))
+                      : '—'}
+                  </dd>
                 </div>
                 <div>
                   <dt className="inline text-muted">Statut : </dt>

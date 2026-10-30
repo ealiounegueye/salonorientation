@@ -11,6 +11,7 @@ import { chargerParticipants, exporterExcel, exporterPdf } from '../lib/export'
 import { calculerStats } from '../lib/stats'
 import { extraireCode, filtreRecherche, formatQuand, JOURS, libelleDates, libelleProfil, LIBELLE_STATUT, nomComplet, PROFILS } from '../lib/format'
 import { demanderAccesCamera } from '../lib/camera'
+import { jourSalonDakar, joursPresentsApresScan, normaliserJoursPresents } from '../lib/presence'
 import { lireParametres } from '../lib/parametres'
 import { supabase } from '../lib/supabase'
 import type { Participant, StatutParticipant } from '../types'
@@ -33,6 +34,7 @@ export function AdminPage() {
   const [saisie, setSaisie] = useState('')
   const [filtre, setFiltre] = useState<(typeof FILTRES)[number]['id']>('tous')
   const [joursDispo, setJoursDispo] = useState<string[]>([...JOURS])
+  const [jourScan, setJourScan] = useState('')
   const [jour, setJour] = useState('toutes')
   const [profil, setProfil] = useState('tous')
   const [listeEnCours, setListeEnCours] = useState(false)
@@ -52,7 +54,11 @@ export function AdminPage() {
 
   useEffect(() => {
     if (!configured) return
-    void lireParametres(true).then((salon) => setJoursDispo(salon.jours))
+    void lireParametres(true).then((salon) => {
+      setJoursDispo(salon.jours)
+      const auto = jourSalonDakar(salon.jours)
+      setJourScan(auto ?? salon.jours[0] ?? '')
+    })
   }, [configured])
 
   const charger = useCallback(async () => {
@@ -135,8 +141,22 @@ export function AdminPage() {
       signaler(false, `${nomComplet(participant)} — inscription annulée.`)
       return
     }
-    if (participant.statut !== 'present') {
-      const { error } = await supabase.from('participants').update({ statut: 'present' }).eq('id', participant.id)
+    const jourPointage = jourScan.trim()
+    if (!jourPointage || !joursDispo.includes(jourPointage)) {
+      signaler(false, 'Choisissez le jour de pointage.')
+      recents.current.delete(valeur)
+      return
+    }
+
+    const avant = normaliserJoursPresents(participant.jours_presents)
+    const dejaCeJour = avant.includes(jourPointage)
+    const joursPresents = joursPresentsApresScan(avant, jourPointage)
+
+    if (!dejaCeJour || participant.statut !== 'present') {
+      const { error } = await supabase
+        .from('participants')
+        .update({ statut: 'present', jours_presents: joursPresents })
+        .eq('id', participant.id)
       if (error) {
         signaler(false, 'Le pointage n’a pas abouti.')
         recents.current.delete(valeur)
@@ -144,7 +164,9 @@ export function AdminPage() {
       }
       void charger()
     }
-    signaler(true, `Scanné — ${nomComplet(participant)}`)
+
+    const suffixeJour = ` · ${jourPointage} nov.`
+    signaler(true, dejaCeJour ? `Déjà pointé${suffixeJour} — ${nomComplet(participant)}` : `Scanné${suffixeJour} — ${nomComplet(participant)}`)
     navigator.vibrate?.(40)
   }
 
@@ -191,6 +213,21 @@ export function AdminPage() {
       <AppHeader subtitle="Participants" />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
         <section className="rounded-2xl border border-line bg-white p-4">
+          <label className="mb-3 block">
+            <span className="mb-1.5 block text-sm font-medium text-ink">Jour de pointage</span>
+            <select
+              value={jourScan}
+              onChange={(event) => setJourScan(event.target.value)}
+              className="w-full rounded-2xl border border-line bg-paper px-4 py-3 text-sm font-medium outline-none ring-red/20 focus:ring-4 sm:max-w-xs"
+            >
+              {joursDispo.map((item) => (
+                <option key={item} value={item}>
+                  {item} novembre
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-muted">Chaque scan enregistre la présence pour ce jour uniquement.</p>
+          </label>
           <button
             type="button"
             disabled={demandeCamera}
