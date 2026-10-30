@@ -6,7 +6,7 @@ import { InfosLieu } from '../components/InfosLieu'
 import { QrBadge } from '../components/QrBadge'
 import { renvoyerBadge } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
-import { peutSupprimerParticipant } from '../lib/permissions'
+import { peutGererFicheParticipant, peutSupprimerParticipant } from '../lib/permissions'
 import { formatQuand, libelleDates, libelleProfil, libelleSexe, LIBELLE_STATUT, nomComplet } from '../lib/format'
 import { supabase } from '../lib/supabase'
 import type { Participant, StatutParticipant } from '../types'
@@ -16,6 +16,7 @@ export function AdminParticipantPage() {
   const navigate = useNavigate()
   const { profile } = useAuth()
   const peutSupprimer = peutSupprimerParticipant(profile?.role)
+  const peutGerer = peutGererFicheParticipant(profile?.role)
   const [participant, setParticipant] = useState<Participant | null>(null)
   const [introuvable, setIntrouvable] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -133,45 +134,47 @@ export function AdminParticipantPage() {
                 </div>
               </dl>
               {message && <p className="mt-4 text-sm font-medium">{message}</p>}
-              <div className="mt-5 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={envoi || participant.statut === 'annule'}
-                  onClick={() => void renvoyer()}
-                  className="rounded-full bg-red px-4 py-2 text-sm font-semibold text-white hover:bg-red-dark disabled:opacity-50"
-                >
-                  {envoi ? 'Envoi…' : 'Renvoyer le badge'}
-                </button>
-                {participant.statut !== 'present' && participant.statut !== 'annule' && (
-                  <button type="button" onClick={() => void changerStatut('present')} className="rounded-full border border-line px-4 py-2 text-sm font-medium">
-                    Marquer présent
-                  </button>
-                )}
-                {participant.statut === 'present' && (
-                  <button type="button" onClick={() => void changerStatut('inscrit')} className="rounded-full border border-line px-4 py-2 text-sm font-medium">
-                    Annuler le pointage
-                  </button>
-                )}
-                {participant.statut !== 'annule' ? (
-                  <button type="button" onClick={() => void changerStatut('annule')} className="rounded-full border border-line px-4 py-2 text-sm font-medium">
-                    Annuler l’inscription
-                  </button>
-                ) : (
-                  <button type="button" onClick={() => void changerStatut('inscrit')} className="rounded-full border border-line px-4 py-2 text-sm font-medium">
-                    Réactiver
-                  </button>
-                )}
-                {peutSupprimer && (
+              {peutGerer && (
+                <div className="mt-5 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    disabled={suppression}
-                    onClick={() => setConfirmSuppression(true)}
-                    className="rounded-full border border-red px-4 py-2 text-sm font-medium text-red hover:bg-red/5 disabled:opacity-50"
+                    disabled={envoi || participant.statut === 'annule'}
+                    onClick={() => void renvoyer()}
+                    className="rounded-full bg-red px-4 py-2 text-sm font-semibold text-white hover:bg-red-dark disabled:opacity-50"
                   >
-                    {suppression ? 'Suppression…' : 'Supprimer'}
+                    {envoi ? 'Envoi…' : 'Renvoyer le badge'}
                   </button>
-                )}
-              </div>
+                  {participant.statut !== 'present' && participant.statut !== 'annule' && (
+                    <button type="button" onClick={() => void changerStatut('present')} className="rounded-full border border-line px-4 py-2 text-sm font-medium">
+                      Marquer présent
+                    </button>
+                  )}
+                  {participant.statut === 'present' && (
+                    <button type="button" onClick={() => void changerStatut('inscrit')} className="rounded-full border border-line px-4 py-2 text-sm font-medium">
+                      Annuler le pointage
+                    </button>
+                  )}
+                  {participant.statut !== 'annule' ? (
+                    <button type="button" onClick={() => void changerStatut('annule')} className="rounded-full border border-line px-4 py-2 text-sm font-medium">
+                      Annuler l’inscription
+                    </button>
+                  ) : (
+                    <button type="button" onClick={() => void changerStatut('inscrit')} className="rounded-full border border-line px-4 py-2 text-sm font-medium">
+                      Réactiver
+                    </button>
+                  )}
+                  {peutSupprimer && (
+                    <button
+                      type="button"
+                      disabled={suppression}
+                      onClick={() => setConfirmSuppression(true)}
+                      className="rounded-full border border-red px-4 py-2 text-sm font-medium text-red hover:bg-red/5 disabled:opacity-50"
+                    >
+                      {suppression ? 'Suppression…' : 'Supprimer'}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

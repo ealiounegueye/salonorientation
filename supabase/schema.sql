@@ -11,7 +11,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   nom text not null,
   email text not null unique,
-  role text not null default 'admin' check (role in ('admin', 'super_admin')),
+  role text not null default 'admin' check (role in ('admin', 'super_admin', 'hotesse')),
   created_at timestamptz not null default now()
 );
 
@@ -130,6 +130,19 @@ as $$
   select exists (
     select 1 from public.profiles
     where id = auth.uid() and role = 'super_admin'
+  );
+$$;
+
+create or replace function public.peut_voir_participants()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role in ('admin', 'super_admin', 'hotesse')
   );
 $$;
 
@@ -365,7 +378,7 @@ create policy "profiles_select" on public.profiles
 drop policy if exists "campagne_select" on public.campagne;
 create policy "campagne_select" on public.campagne
   for select to authenticated
-  using (public.is_admin());
+  using (public.peut_voir_participants());
 
 drop policy if exists "campagne_update" on public.campagne;
 create policy "campagne_update" on public.campagne
@@ -376,13 +389,13 @@ create policy "campagne_update" on public.campagne
 drop policy if exists "participants_select" on public.participants;
 create policy "participants_select" on public.participants
   for select to authenticated
-  using (public.is_admin());
+  using (public.peut_voir_participants());
 
 drop policy if exists "participants_update" on public.participants;
 create policy "participants_update" on public.participants
   for update to authenticated
-  using (public.is_admin())
-  with check (public.is_admin());
+  using (public.peut_voir_participants())
+  with check (public.peut_voir_participants());
 
 drop policy if exists "participants_delete" on public.participants;
 create policy "participants_delete" on public.participants

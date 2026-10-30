@@ -2,23 +2,33 @@ import { Link, useLocation } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { evenement } from '../lib/evenement'
-import { estSuperAdmin, libelleRole } from '../lib/permissions'
+import {
+  accueilApresConnexion,
+  estBackoffice,
+  estHotesse,
+  estSuperAdmin,
+  libelleRole,
+  peutVoirTableauDeBord,
+} from '../lib/permissions'
 import { LogoAuchan } from './LogoAuchan'
 
 export function AppHeader({ subtitle }: { subtitle: string }) {
   const { profile, signOut } = useAuth()
   const { pathname } = useLocation()
+  const hotesse = estHotesse(profile?.role)
+  const backoffice = estBackoffice(profile?.role)
+  const superAdmin = estSuperAdmin(profile?.role)
+  const accueil = profile ? accueilApresConnexion(profile.role) : '/admin/participants'
   const dashboardActif = pathname === '/admin'
   const listeActive = pathname === '/admin/participants' || pathname.startsWith('/admin/participants/')
   const reglagesActifs = pathname === '/admin/reglages'
   const compteActif = pathname === '/admin/compte'
-  const superAdmin = estSuperAdmin(profile?.role)
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
       <div className="flex items-center justify-between gap-2 px-3 py-2 sm:gap-4 sm:px-6 sm:py-3">
         <div className="flex min-w-0 items-center gap-2 sm:gap-4">
-          <Link to="/admin" className="shrink-0" aria-label="Tableau de bord">
+          <Link to={accueil} className="shrink-0" aria-label={hotesse ? 'Participants' : 'Tableau de bord'}>
             <LogoAuchan className="max-w-[9.5rem] object-left sm:h-9 sm:max-w-none" />
           </Link>
           <div className="hidden h-8 w-px bg-line sm:block" />
@@ -31,16 +41,18 @@ export function AppHeader({ subtitle }: { subtitle: string }) {
         </div>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <nav className="flex items-center gap-1.5 text-xs font-medium sm:gap-2 sm:text-sm">
-            <Link
-              to="/admin"
-              className={
-                dashboardActif
-                  ? 'rounded-full bg-red px-2.5 py-1.5 text-white sm:px-3'
-                  : 'rounded-full border border-line px-2.5 py-1.5 hover:border-red/40 sm:px-3'
-              }
-            >
-              Tableau de bord
-            </Link>
+            {peutVoirTableauDeBord(profile?.role) && (
+              <Link
+                to="/admin"
+                className={
+                  dashboardActif
+                    ? 'rounded-full bg-red px-2.5 py-1.5 text-white sm:px-3'
+                    : 'rounded-full border border-line px-2.5 py-1.5 hover:border-red/40 sm:px-3'
+                }
+              >
+                Tableau de bord
+              </Link>
+            )}
             <Link
               to="/admin/participants"
               className={
@@ -62,7 +74,7 @@ export function AppHeader({ subtitle }: { subtitle: string }) {
               >
                 Réglages
               </Link>
-            ) : (
+            ) : backoffice ? (
               <Link
                 to="/admin/compte"
                 className={
@@ -73,7 +85,7 @@ export function AppHeader({ subtitle }: { subtitle: string }) {
               >
                 Mon compte
               </Link>
-            )}
+            ) : null}
           </nav>
           <div className="hidden text-right sm:block">
             <p className="text-sm font-semibold">{profile?.nom}</p>

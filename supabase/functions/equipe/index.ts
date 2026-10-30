@@ -10,9 +10,11 @@ type Corps = {
   id?: string
 }
 
-function roleAutorise(valeur: unknown): 'admin' | 'super_admin' {
+function roleAutorise(valeur: unknown): 'admin' | 'super_admin' | 'hotesse' {
   const role = String(valeur ?? 'admin').trim()
-  return role === 'super_admin' ? 'super_admin' : 'admin'
+  if (role === 'super_admin') return 'super_admin'
+  if (role === 'hotesse') return 'hotesse'
+  return 'admin'
 }
 
 function texte(valeur: unknown, max: number) {

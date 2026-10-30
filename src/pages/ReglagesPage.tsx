@@ -255,9 +255,9 @@ export function ReglagesPage() {
         <section className="rounded-2xl border border-line bg-white p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Équipe</p>
           <p className="mt-2 text-sm text-muted">
-            <strong className="font-medium text-ink">Admin</strong> : tableau de bord, participants, scan, exports, badges — sans
-            réglages salon ni gestion d’équipe. <strong className="font-medium text-ink">Super admin</strong> : tout, y compris
-            ouverture des inscriptions et suppression définitive.
+            <strong className="font-medium text-ink">Hôtesse</strong> : page participants et scan uniquement.{' '}
+            <strong className="font-medium text-ink">Admin</strong> : tableau de bord, exports, badges — sans réglages ni
+            équipe. <strong className="font-medium text-ink">Super admin</strong> : tout.
           </p>
           <ul className="mt-3 divide-y divide-line">
             {equipe.map((membre) => (
@@ -319,6 +319,7 @@ export function ReglagesPage() {
                         onChange={(event) => setEditRole(event.target.value as Role)}
                         className={champ}
                       >
+                        <option value="hotesse">Hôtesse</option>
                         <option value="admin">Admin</option>
                         <option value="super_admin">Super admin</option>
                       </select>
@@ -388,6 +389,7 @@ export function ReglagesPage() {
                 onChange={(event) => setRoleNouveau(event.target.value as Role)}
                 className={champ}
               >
+                <option value="hotesse">Hôtesse</option>
                 <option value="admin">Admin</option>
                 <option value="super_admin">Super admin</option>
               </select>

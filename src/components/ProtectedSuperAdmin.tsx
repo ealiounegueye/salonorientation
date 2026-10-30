@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { estStaff, estSuperAdmin } from '../lib/permissions'
+import { estHotesse, estStaff, estSuperAdmin } from '../lib/permissions'
 
 export function ProtectedSuperAdmin({ children }: { children: ReactNode }) {
   const { loading, session, profile } = useAuth()
@@ -11,6 +11,9 @@ export function ProtectedSuperAdmin({ children }: { children: ReactNode }) {
   }
   if (!session || !profile || !estStaff(profile.role)) {
     return <Navigate to="/admin/connexion" replace />
+  }
+  if (estHotesse(profile.role)) {
+    return <Navigate to="/admin/participants" replace />
   }
   if (!estSuperAdmin(profile.role)) {
     return <Navigate to="/admin/compte" replace />

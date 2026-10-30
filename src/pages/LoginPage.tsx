@@ -1,15 +1,22 @@
-import { useState, type FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
+import { useEffect, useState, type FormEvent } from 'react'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { BandeauAuchan } from '../components/BandeauAuchan'
 import { LogoAuchan } from '../components/LogoAuchan'
 import { useAuth } from '../context/AuthContext'
+import { accueilApresConnexion, estStaff } from '../lib/permissions'
 import { evenement } from '../lib/evenement'
 
 const champ =
   'w-full rounded-2xl border border-line bg-paper px-4 py-3 outline-none ring-red/20 placeholder:text-muted/70 focus:ring-4'
 
 export function LoginPage() {
+  const navigate = useNavigate()
   const { loading, configured, session, profile, signIn, signOut } = useAuth()
+
+  useEffect(() => {
+    if (loading || !session || !profile || !estStaff(profile.role)) return
+    navigate(accueilApresConnexion(profile.role), { replace: true })
+  }, [loading, session, profile, navigate])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -23,8 +30,8 @@ export function LoginPage() {
     )
   }
 
-  if (session && (profile?.role === 'admin' || profile?.role === 'super_admin')) {
-    return <Navigate to="/admin" replace />
+  if (session && profile && estStaff(profile.role)) {
+    return <Navigate to={accueilApresConnexion(profile.role)} replace />
   }
 
   async function onSubmit(event: FormEvent) {

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { isConfigured, supabase } from '../lib/supabase'
+import { normaliserRole } from '../lib/permissions'
 import type { Profile } from '../types'
 
 type AuthContextValue = {
@@ -14,9 +15,12 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-async function chargerProfil(userId: string) {
+async function chargerProfil(userId: string): Promise<Profile | null> {
   const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
-  return (data as Profile | null) ?? null
+  if (!data) return null
+  const role = normaliserRole(data.role)
+  if (!role) return null
+  return { ...(data as Profile), role }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -68,8 +72,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       profile,
       signIn: async (email, password) => {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
-        return error ? error.message : null
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+        if (error) return error.message
+        if (data.session) {
+          setSession(data.session)
+          const loaded = await chargerProfil(data.session.user.id)
+          setProfile(loaded)
+          setLoading(false)
+        }
+        return null
       },
       signOut: async () => {
         await supabase.auth.signOut({ scope: 'local' })

@@ -3,7 +3,7 @@ import { AuthProvider } from './context/AuthContext'
 import { AppFooter } from './components/AppFooter'
 import { Protected } from './components/Protected'
 import { AdminPage } from './pages/AdminPage'
-import { DashboardPage } from './pages/DashboardPage'
+import { AccueilAdmin } from './pages/AccueilAdmin'
 import { AdminParticipantPage } from './pages/AdminParticipantPage'
 import { ConfirmationPage } from './pages/ConfirmationPage'
 import { InscriptionPage } from './pages/InscriptionPage'
@@ -11,12 +11,15 @@ import { LoginPage } from './pages/LoginPage'
 import { ReglagesPage } from './pages/ReglagesPage'
 import { ComptePage } from './pages/ComptePage'
 import { ProtectedSuperAdmin } from './components/ProtectedSuperAdmin'
+import { ProtectedBackoffice } from './components/ProtectedBackoffice'
+import { RedirigerHotesse } from './components/RedirigerHotesse'
 
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <div className="flex min-h-screen flex-col">
+          <RedirigerHotesse />
           <div className="flex-1">
             <Routes>
               <Route path="/" element={<InscriptionPage />} />
@@ -26,7 +29,7 @@ export default function App() {
                 path="/admin"
                 element={
                   <Protected>
-                    <DashboardPage />
+                    <AccueilAdmin />
                   </Protected>
                 }
               />
@@ -50,7 +53,9 @@ export default function App() {
                 path="/admin/compte"
                 element={
                   <Protected>
-                    <ComptePage />
+                    <ProtectedBackoffice>
+                      <ComptePage />
+                    </ProtectedBackoffice>
                   </Protected>
                 }
               />

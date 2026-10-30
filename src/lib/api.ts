@@ -52,8 +52,8 @@ export async function inscrire(formulaire: FormulaireInscription): Promise<Resul
 
 export async function gererEquipe(
   corps:
-    | { action: 'creer'; nom: string; email: string; password: string; role?: 'admin' | 'super_admin' }
-    | { action: 'modifier'; id: string; nom: string; email: string; role?: 'admin' | 'super_admin' }
+    | { action: 'creer'; nom: string; email: string; password: string; role?: 'admin' | 'super_admin' | 'hotesse' }
+    | { action: 'modifier'; id: string; nom: string; email: string; role?: 'admin' | 'super_admin' | 'hotesse' }
     | { action: 'reinitialiser'; id: string; password: string }
     | { action: 'retirer'; id: string },
 ): Promise<{ ok: boolean; message: string }> {

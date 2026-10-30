@@ -6,7 +6,7 @@ import { AppHeader } from '../components/AppHeader'
 import { BoiteConfirmation } from '../components/BoiteConfirmation'
 import { ScanPresence } from '../components/ScanPresence'
 import { useAuth } from '../context/AuthContext'
-import { peutSupprimerParticipant } from '../lib/permissions'
+import { peutAjouterParticipant, peutExporterParticipants, peutSupprimerParticipant } from '../lib/permissions'
 import { chargerParticipants, exporterExcel, exporterPdf } from '../lib/export'
 import { calculerStats } from '../lib/stats'
 import { extraireCode, filtreRecherche, formatQuand, JOURS, libelleDates, libelleProfil, LIBELLE_STATUT, nomComplet, PROFILS } from '../lib/format'
@@ -25,6 +25,8 @@ const FILTRES: Array<{ id: 'tous' | StatutParticipant; label: string }> = [
 export function AdminPage() {
   const { configured, profile } = useAuth()
   const peutSupprimer = peutSupprimerParticipant(profile?.role)
+  const peutExporter = peutExporterParticipants(profile?.role)
+  const peutAjouter = peutAjouterParticipant(profile?.role)
   const [lignes, setLignes] = useState<Participant[]>([])
   const [total, setTotal] = useState(0)
   const [recherche, setRecherche] = useState('')
@@ -271,32 +273,38 @@ export function AdminPage() {
                   {item.label}
                 </button>
               ))}
-              <button
-                type="button"
-                onClick={() => setAjout((ouvert) => !ouvert)}
-                className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-sm font-medium hover:border-red/40"
-              >
-                <UserPlus className="size-4" />
-                Ajouter
-              </button>
-              <button
-                type="button"
-                onClick={() => void exporter('xlsx')}
-                disabled={exportEnCours}
-                className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-sm font-medium hover:border-red/40 disabled:opacity-60"
-              >
-                <FileSpreadsheet className="size-4" />
-                {exportEnCours ? 'Export…' : 'Excel'}
-              </button>
-              <button
-                type="button"
-                onClick={() => void exporter('pdf')}
-                disabled={exportEnCours}
-                className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-sm font-medium hover:border-red/40 disabled:opacity-60"
-              >
-                <FileText className="size-4" />
-                PDF
-              </button>
+              {peutAjouter && (
+                <button
+                  type="button"
+                  onClick={() => setAjout((ouvert) => !ouvert)}
+                  className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-sm font-medium hover:border-red/40"
+                >
+                  <UserPlus className="size-4" />
+                  Ajouter
+                </button>
+              )}
+              {peutExporter && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void exporter('xlsx')}
+                    disabled={exportEnCours}
+                    className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-sm font-medium hover:border-red/40 disabled:opacity-60"
+                  >
+                    <FileSpreadsheet className="size-4" />
+                    {exportEnCours ? 'Export…' : 'Excel'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void exporter('pdf')}
+                    disabled={exportEnCours}
+                    className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-sm font-medium hover:border-red/40 disabled:opacity-60"
+                  >
+                    <FileText className="size-4" />
+                    PDF
+                  </button>
+                </>
+              )}
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
