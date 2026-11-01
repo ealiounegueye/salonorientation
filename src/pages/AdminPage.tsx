@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { CalendarDays, FileSpreadsheet, FileText, ScanLine, Search, Trash2, UserPlus, Users } from 'lucide-react'
 import { AjoutParticipant } from '../components/AjoutParticipant'
@@ -6,12 +6,22 @@ import { AppHeader } from '../components/AppHeader'
 import { BoiteConfirmation } from '../components/BoiteConfirmation'
 import { ScanPresence } from '../components/ScanPresence'
 import { useAuth } from '../context/AuthContext'
-import { peutAjouterParticipant, peutExporterParticipants, peutSupprimerParticipant } from '../lib/permissions'
+import {
+  estBackoffice,
+  peutAjouterParticipant,
+  peutExporterParticipants,
+  peutSupprimerParticipant,
+} from '../lib/permissions'
 import { chargerParticipants, exporterExcel, exporterPdf } from '../lib/export'
 import { calculerStats } from '../lib/stats'
 import { extraireCode, filtreRecherche, formatQuand, JOURS, libelleDates, libelleProfil, LIBELLE_STATUT, nomComplet, PROFILS } from '../lib/format'
 import { demanderAccesCamera } from '../lib/camera'
-import { jourSalonDakar, joursPresentsApresScan, normaliserJoursPresents } from '../lib/presence'
+import {
+  jourPointageScan,
+  joursPresentsApresScan,
+  libelleJourSalon,
+  normaliserJoursPresents,
+} from '../lib/presence'
 import { lireParametres } from '../lib/parametres'
 import { supabase } from '../lib/supabase'
 import type { Participant, StatutParticipant } from '../types'
@@ -28,13 +38,16 @@ export function AdminPage() {
   const peutSupprimer = peutSupprimerParticipant(profile?.role)
   const peutExporter = peutExporterParticipants(profile?.role)
   const peutAjouter = peutAjouterParticipant(profile?.role)
+  const peutForcerJourPointage = estBackoffice(profile?.role)
   const [lignes, setLignes] = useState<Participant[]>([])
   const [total, setTotal] = useState(0)
   const [recherche, setRecherche] = useState('')
   const [saisie, setSaisie] = useState('')
   const [filtre, setFiltre] = useState<(typeof FILTRES)[number]['id']>('tous')
   const [joursDispo, setJoursDispo] = useState<string[]>([...JOURS])
-  const [jourScan, setJourScan] = useState('')
+  const [correctionJour, setCorrectionJour] = useState(false)
+  const [jourScanManuel, setJourScanManuel] = useState('')
+  const [horloge, setHorloge] = useState(() => Date.now())
   const [jour, setJour] = useState('toutes')
   const [profil, setProfil] = useState('tous')
   const [listeEnCours, setListeEnCours] = useState(false)
@@ -56,10 +69,20 @@ export function AdminPage() {
     if (!configured) return
     void lireParametres(true).then((salon) => {
       setJoursDispo(salon.jours)
-      const auto = jourSalonDakar(salon.jours)
-      setJourScan(auto ?? salon.jours[0] ?? '')
+      setJourScanManuel(salon.jours[0] ?? '')
     })
   }, [configured])
+
+  useEffect(() => {
+    const id = window.setInterval(() => setHorloge(Date.now()), 60_000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  const jourPointage = useMemo(() => {
+    void horloge
+    const override = correctionJour && peutForcerJourPointage ? jourScanManuel : null
+    return jourPointageScan(joursDispo, override)
+  }, [correctionJour, horloge, jourScanManuel, joursDispo, peutForcerJourPointage])
 
   const charger = useCallback(async () => {
     const ticket = ++requeteListe.current
@@ -141,12 +164,13 @@ export function AdminPage() {
       signaler(false, `${nomComplet(participant)} — inscription annulée.`)
       return
     }
-    const jourPointage = jourScan.trim()
-    if (!jourPointage || !joursDispo.includes(jourPointage)) {
-      signaler(false, 'Choisissez le jour de pointage.')
+    const jourCourant = jourPointageScan(joursDispo, correctionJour && peutForcerJourPointage ? jourScanManuel : null)
+    if (!jourCourant) {
+      signaler(false, 'Pointage impossible : aujourd’hui n’est pas un jour du salon (heure Dakar).')
       recents.current.delete(valeur)
       return
     }
+    const jourPointage = jourCourant
 
     const avant = normaliserJoursPresents(participant.jours_presents)
     const dejaCeJour = avant.includes(jourPointage)
@@ -213,24 +237,53 @@ export function AdminPage() {
       <AppHeader subtitle="Participants" />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
         <section className="rounded-2xl border border-line bg-white p-4">
-          <label className="mb-3 block">
-            <span className="mb-1.5 block text-sm font-medium text-ink">Jour de pointage</span>
-            <select
-              value={jourScan}
-              onChange={(event) => setJourScan(event.target.value)}
-              className="w-full rounded-2xl border border-line bg-paper px-4 py-3 text-sm font-medium outline-none ring-red/20 focus:ring-4 sm:max-w-xs"
-            >
-              {joursDispo.map((item) => (
-                <option key={item} value={item}>
-                  {item} novembre
-                </option>
-              ))}
-            </select>
+          <div className="mb-3 rounded-2xl border border-line bg-paper/80 px-4 py-3">
+            <p className="text-sm font-medium text-ink">Jour de pointage</p>
+            {jourPointage ? (
+              <p className="mt-1 text-lg font-semibold text-red">
+                {libelleJourSalon(jourPointage)}
+                {!correctionJour || !peutForcerJourPointage ? (
+                  <span className="ml-2 text-sm font-normal text-muted">(automatique · Dakar)</span>
+                ) : (
+                  <span className="ml-2 text-sm font-normal text-muted">(correction admin)</span>
+                )}
+              </p>
+            ) : (
+              <p className="mt-1 text-sm font-medium text-red">
+                Aujourd’hui n’est pas un jour du salon — scan indisponible (heure Dakar).
+              </p>
+            )}
             <p className="mt-1 text-xs text-muted">Chaque scan enregistre la présence pour ce jour uniquement.</p>
-          </label>
+            {peutForcerJourPointage && (
+              <div className="mt-3 border-t border-line pt-3">
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={correctionJour}
+                    onChange={(event) => setCorrectionJour(event.target.checked)}
+                    className="size-4 accent-red"
+                  />
+                  Forcer un autre jour (admin)
+                </label>
+                {correctionJour && (
+                  <select
+                    value={jourScanManuel}
+                    onChange={(event) => setJourScanManuel(event.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-line bg-white px-4 py-2.5 text-sm font-medium outline-none ring-red/20 focus:ring-4 sm:max-w-xs"
+                  >
+                    {joursDispo.map((item) => (
+                      <option key={item} value={item}>
+                        {libelleJourSalon(item)}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
+          </div>
           <button
             type="button"
-            disabled={demandeCamera}
+            disabled={demandeCamera || !jourPointage}
             onClick={() => {
               preparerSon()
               if (camera) {

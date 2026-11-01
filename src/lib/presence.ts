@@ -1,3 +1,7 @@
+export function libelleJourSalon(jour: string) {
+  return `${jour} novembre`
+}
+
 /** Jour du mois (ex. « 19 ») à Dakar, s’il fait partie des jours du salon. */
 export function jourSalonDakar(joursSalon: readonly string[]): string | null {
   const brut = new Intl.DateTimeFormat('en-CA', {
@@ -7,6 +11,16 @@ export function jourSalonDakar(joursSalon: readonly string[]): string | null {
   const jour = String(Number.parseInt(brut, 10))
   if (!Number.isFinite(Number(jour))) return null
   return joursSalon.includes(jour) ? jour : null
+}
+
+/** Jour enregistré au scan : calendrier Dakar, sauf override admin explicite. */
+export function jourPointageScan(
+  joursSalon: readonly string[],
+  overrideAdmin: string | null | undefined,
+): string | null {
+  const manuel = overrideAdmin?.trim()
+  if (manuel && joursSalon.includes(manuel)) return manuel
+  return jourSalonDakar(joursSalon)
 }
 
 export function normaliserJoursPresents(valeur: string[] | null | undefined): string[] {
