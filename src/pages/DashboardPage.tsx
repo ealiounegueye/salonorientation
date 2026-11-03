@@ -229,8 +229,8 @@ export function DashboardPage() {
               <p className="text-sm text-muted">Liste, QR code, ajout manuel</p>
             </div>
           </Link>
-          <article className="flex flex-1 items-center justify-between gap-3 rounded-2xl border border-line bg-white p-4">
-            <div className="flex items-center gap-3">
+          <article className="flex flex-1 flex-col gap-3 rounded-2xl border border-line bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
               <span className="flex size-11 items-center justify-center rounded-full bg-green/10 text-green">
                 <Users className="size-5" />
               </span>
@@ -242,7 +242,7 @@ export function DashboardPage() {
             <button
               type="button"
               onClick={() => demanderBasculerCampagne()}
-              className="rounded-full bg-red px-4 py-2 text-sm font-semibold text-white hover:bg-red-dark"
+              className="w-full shrink-0 rounded-full bg-red px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-dark sm:w-auto"
             >
               {ouverts ? 'Fermer' : 'Ouvrir'}
             </button>

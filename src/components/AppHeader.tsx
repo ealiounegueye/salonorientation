@@ -12,6 +12,11 @@ import {
 } from '../lib/permissions'
 import { LogoAuchan } from './LogoAuchan'
 
+const lienClasse = (actif: boolean) =>
+  actif
+    ? 'shrink-0 whitespace-nowrap rounded-full bg-red px-3 py-2 text-xs font-semibold text-white sm:px-3.5 sm:text-sm'
+    : 'shrink-0 whitespace-nowrap rounded-full border border-line px-3 py-2 text-xs font-semibold hover:border-red/40 sm:px-3.5 sm:text-sm'
+
 export function AppHeader({ subtitle }: { subtitle: string }) {
   const { profile, signOut } = useAuth()
   const { pathname } = useLocation()
@@ -25,76 +30,56 @@ export function AppHeader({ subtitle }: { subtitle: string }) {
   const compteActif = pathname === '/admin/compte'
 
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
-      <div className="flex items-center justify-between gap-2 px-3 py-2 sm:gap-4 sm:px-6 sm:py-3">
+    <header className="sticky top-0 z-30 border-b border-line bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
+      <div className="flex flex-col gap-2 px-3 py-2 sm:gap-3 sm:px-6 sm:py-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 items-center gap-2 sm:gap-4">
           <Link to={accueil} className="shrink-0" aria-label={hotesse ? 'Participants' : 'Tableau de bord'}>
-            <LogoAuchan className="max-w-[9.5rem] object-left sm:h-9 sm:max-w-none" />
+            <LogoAuchan className="h-8 max-w-[8.5rem] object-left sm:h-9 sm:max-w-none" />
           </Link>
-          <div className="hidden h-8 w-px bg-line sm:block" />
-          <div className="min-w-0">
-            <p className="hidden text-[11px] font-semibold uppercase tracking-[0.18em] text-red sm:block">
+          <div className="hidden h-8 w-px bg-line md:block" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-red sm:text-[11px] sm:tracking-[0.18em]">
               {evenement.titre}
             </p>
             <h1 className="truncate text-base font-semibold tracking-tight text-ink sm:text-xl">{subtitle}</h1>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <nav className="flex items-center gap-1.5 text-xs font-medium sm:gap-2 sm:text-sm">
+
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <nav
+            className="bandeau-defilant flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2 lg:flex-none"
+            aria-label="Navigation admin"
+          >
             {peutVoirTableauDeBord(profile?.role) && (
-              <Link
-                to="/admin"
-                className={
-                  dashboardActif
-                    ? 'rounded-full bg-red px-2.5 py-1.5 text-white sm:px-3'
-                    : 'rounded-full border border-line px-2.5 py-1.5 hover:border-red/40 sm:px-3'
-                }
-              >
-                Tableau de bord
+              <Link to="/admin" className={lienClasse(dashboardActif)}>
+                <span className="sm:hidden">Tableau</span>
+                <span className="hidden sm:inline">Tableau de bord</span>
               </Link>
             )}
-            <Link
-              to="/admin/participants"
-              className={
-                listeActive
-                  ? 'rounded-full bg-red px-2.5 py-1.5 text-white sm:px-3'
-                  : 'rounded-full border border-line px-2.5 py-1.5 hover:border-red/40 sm:px-3'
-              }
-            >
+            <Link to="/admin/participants" className={lienClasse(listeActive)}>
               Participants
             </Link>
             {superAdmin ? (
-              <Link
-                to="/admin/reglages"
-                className={
-                  reglagesActifs
-                    ? 'rounded-full bg-red px-2.5 py-1.5 text-white sm:px-3'
-                    : 'rounded-full border border-line px-2.5 py-1.5 hover:border-red/40 sm:px-3'
-                }
-              >
+              <Link to="/admin/reglages" className={lienClasse(reglagesActifs)}>
                 Réglages
               </Link>
             ) : backoffice ? (
-              <Link
-                to="/admin/compte"
-                className={
-                  compteActif
-                    ? 'rounded-full bg-red px-2.5 py-1.5 text-white sm:px-3'
-                    : 'rounded-full border border-line px-2.5 py-1.5 hover:border-red/40 sm:px-3'
-                }
-              >
-                Mon compte
+              <Link to="/admin/compte" className={lienClasse(compteActif)}>
+                <span className="sm:hidden">Compte</span>
+                <span className="hidden sm:inline">Mon compte</span>
               </Link>
             ) : null}
           </nav>
-          <div className="hidden text-right sm:block">
-            <p className="text-sm font-semibold">{profile?.nom}</p>
+
+          <div className="hidden shrink-0 text-right lg:block">
+            <p className="max-w-[10rem] truncate text-sm font-semibold">{profile?.nom}</p>
             <p className="text-xs text-muted">{profile ? libelleRole(profile.role) : ''}</p>
           </div>
           <button
             type="button"
             onClick={() => void signOut()}
-            className="inline-flex items-center gap-2 rounded-full border border-line bg-paper px-3 py-2 text-sm font-medium text-ink hover:border-red/40"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-paper px-2.5 py-2 text-xs font-semibold text-ink hover:border-red/40 sm:gap-2 sm:px-3 sm:text-sm"
+            aria-label="Quitter"
           >
             <LogOut className="size-4" />
             <span className="hidden sm:inline">Quitter</span>

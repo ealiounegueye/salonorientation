@@ -203,12 +203,12 @@ export function ReglagesPage() {
 
         <section className="rounded-2xl border border-line bg-white p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Inscriptions</p>
-          <div className="mt-3 flex items-center justify-between gap-3">
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-lg font-semibold">{ouverte ? 'Ouvertes' : 'Arrêtées'}</p>
             <button
               type="button"
               onClick={() => demanderBasculerCampagne()}
-              className="rounded-full bg-red px-4 py-2 text-sm font-semibold text-white hover:bg-red-dark"
+              className="w-full rounded-full bg-red px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-dark sm:w-auto"
             >
               {ouverte ? 'Arrêter' : 'Ouvrir'}
             </button>
@@ -263,7 +263,7 @@ export function ReglagesPage() {
           <ul className="mt-3 divide-y divide-line">
             {equipe.map((membre) => (
               <li key={membre.id} className="py-3">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <p className="truncate font-medium">
                       {membre.nom}
@@ -273,7 +273,7 @@ export function ReglagesPage() {
                       {membre.email} · {libelleRole(membre.role)}
                     </p>
                   </div>
-                  <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                  <div className="flex flex-wrap gap-2 sm:shrink-0 sm:justify-end">
                     <button
                       type="button"
                       onClick={() => ouvrirEdition(membre)}

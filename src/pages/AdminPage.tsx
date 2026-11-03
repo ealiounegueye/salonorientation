@@ -38,12 +38,22 @@ import type { Participant, StatutParticipant } from '../types'
 
 const PAGE = 10
 type FiltreListe = 'tous' | StatutParticipant | 'sur_place'
-const FILTRES: Array<{ id: FiltreListe; label: string }> = [
+const FILTRES: Array<{ id: FiltreListe; label: string; court?: string }> = [
   { id: 'tous', label: 'Tous' },
   { id: 'inscrit', label: 'Inscrits' },
   { id: 'present', label: 'Présents' },
-  { id: 'sur_place', label: 'Enregistrés sur place' },
+  { id: 'sur_place', label: 'Enregistrés sur place', court: 'Sur place' },
 ]
+
+const puceFiltre = (actif: boolean) =>
+  actif
+    ? 'shrink-0 whitespace-nowrap rounded-full bg-red px-3 py-2 text-sm font-medium text-white'
+    : 'shrink-0 whitespace-nowrap rounded-full border border-line px-3 py-2 text-sm font-medium'
+
+const puceFiltreDate = (actif: boolean) =>
+  actif
+    ? 'shrink-0 whitespace-nowrap rounded-full bg-ink px-3 py-2 text-sm font-medium text-white'
+    : 'shrink-0 whitespace-nowrap rounded-full border border-line px-3 py-2 text-sm font-medium'
 
 export function AdminPage() {
   const { configured, profile } = useAuth()
@@ -249,7 +259,7 @@ export function AdminPage() {
   return (
     <div>
       <AppHeader subtitle="Participants" />
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-3 py-4 sm:px-6 sm:py-6">
         <section className="rounded-2xl border border-line bg-white p-4">
           <div className="mb-3 rounded-2xl border border-line bg-paper/80 px-4 py-3">
             <p className="text-sm font-medium text-ink">Jour de pointage</p>
@@ -314,14 +324,17 @@ export function AdminPage() {
                 setCamera(true)
               })
             }}
-            className="flex w-full items-center justify-center gap-3 rounded-2xl bg-red py-5 text-lg font-semibold text-white hover:bg-red-dark disabled:opacity-70"
+            className="flex w-full items-center justify-center gap-3 rounded-2xl bg-red py-4 text-base font-semibold text-white hover:bg-red-dark disabled:opacity-70 sm:py-5 sm:text-lg"
           >
             <ScanLine className="size-6" />
             {demandeCamera ? 'Autorisation caméra…' : camera ? 'Arrêter le scan' : 'Scanner un QR code'}
           </button>
           <ScanPresence actif={camera} onCode={(valeur) => void marquerPresent(valeur)} />
           {flash && (
-            <p className={`mt-3 text-center text-lg font-semibold ${flashOk ? 'text-green' : 'text-red'}`} role="status">
+            <p
+              className={`mt-3 text-balance text-center text-base font-semibold break-words sm:text-lg ${flashOk ? 'text-green' : 'text-red'}`}
+              role="status"
+            >
               {flash}
             </p>
           )}
@@ -349,8 +362,8 @@ export function AdminPage() {
         </form>
 
         <section className="rounded-2xl border border-line bg-white">
-          <div className="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative min-w-0 flex-1">
+          <div className="flex flex-col gap-3 border-b border-line p-3 sm:p-4">
+            <div className="relative min-w-0 w-full">
               <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
               <input
                 value={saisie}
@@ -359,7 +372,7 @@ export function AdminPage() {
                 className="w-full rounded-full border border-line bg-paper py-2.5 pr-4 pl-9 outline-none ring-red/20 focus:ring-4"
               />
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="bandeau-defilant -mx-1 flex items-center gap-2 px-1 pb-0.5 md:flex-wrap md:overflow-visible">
               {FILTRES.map((item) => (
                 <button
                   key={item.id}
@@ -368,20 +381,25 @@ export function AdminPage() {
                     setPage(0)
                     setFiltre(item.id)
                   }}
-                  className={
-                    filtre === item.id
-                      ? 'rounded-full bg-red px-3 py-1.5 text-sm font-medium text-white'
-                      : 'rounded-full border border-line px-3 py-1.5 text-sm font-medium'
-                  }
+                  className={puceFiltre(filtre === item.id)}
                 >
-                  {item.label}
+                  {item.court ? (
+                    <>
+                      <span className="md:hidden">{item.court}</span>
+                      <span className="hidden md:inline">{item.label}</span>
+                    </>
+                  ) : (
+                    item.label
+                  )}
                 </button>
               ))}
+            </div>
+            <div className="bandeau-defilant -mx-1 flex items-center gap-2 px-1 pb-0.5 md:flex-wrap md:overflow-visible">
               {peutAjouter && (
                 <button
                   type="button"
                   onClick={() => setAjout((ouvert) => !ouvert)}
-                  className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-sm font-medium hover:border-red/40"
+                  className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-line px-3 py-2 text-sm font-medium hover:border-red/40"
                 >
                   <UserPlus className="size-4" />
                   Ajouter
@@ -393,7 +411,7 @@ export function AdminPage() {
                     type="button"
                     onClick={() => void exporter('xlsx')}
                     disabled={exportEnCours}
-                    className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-sm font-medium hover:border-red/40 disabled:opacity-60"
+                    className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-line px-3 py-2 text-sm font-medium hover:border-red/40 disabled:opacity-60"
                   >
                     <FileSpreadsheet className="size-4" />
                     {exportEnCours ? 'Export…' : 'Excel'}
@@ -402,7 +420,7 @@ export function AdminPage() {
                     type="button"
                     onClick={() => void exporter('pdf')}
                     disabled={exportEnCours}
-                    className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-sm font-medium hover:border-red/40 disabled:opacity-60"
+                    className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-line px-3 py-2 text-sm font-medium hover:border-red/40 disabled:opacity-60"
                   >
                     <FileText className="size-4" />
                     PDF
@@ -411,79 +429,67 @@ export function AdminPage() {
               )}
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
-            <span className="inline-flex items-center gap-2 self-center rounded-full border border-line bg-paper px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-              <CalendarDays className="size-4 shrink-0 text-red" aria-hidden />
-              Date
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                setPage(0)
-                setJour('toutes')
-              }}
-              className={
-                jour === 'toutes'
-                  ? 'rounded-full bg-ink px-3 py-1.5 text-sm font-medium text-white'
-                  : 'rounded-full border border-line px-3 py-1.5 text-sm font-medium'
-              }
-            >
-              Toutes
-            </button>
-            {joursDispo.map((item) => (
+          <div className="border-b border-line px-3 py-3 sm:px-4">
+            <div className="bandeau-defilant flex items-center gap-2">
+              <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-line bg-paper px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted sm:tracking-[0.14em]">
+                <CalendarDays className="size-4 shrink-0 text-red" aria-hidden />
+                Date
+              </span>
               <button
-                key={item}
                 type="button"
                 onClick={() => {
                   setPage(0)
-                  setJour(item)
+                  setJour('toutes')
                 }}
-                className={
-                  jour === item
-                    ? 'rounded-full bg-ink px-3 py-1.5 text-sm font-medium text-white'
-                    : 'rounded-full border border-line px-3 py-1.5 text-sm font-medium'
-                }
+                className={puceFiltreDate(jour === 'toutes')}
               >
-                {item}
+                Toutes
               </button>
-            ))}
+              {joursDispo.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => {
+                    setPage(0)
+                    setJour(item)
+                  }}
+                  className={puceFiltreDate(jour === item)}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
-            <span className="inline-flex items-center gap-2 self-center rounded-full border border-line bg-paper px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-              <Users className="size-4 shrink-0 text-green" aria-hidden />
-              Profils
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                setPage(0)
-                setProfil('tous')
-              }}
-              className={
-                profil === 'tous'
-                  ? 'rounded-full bg-ink px-3 py-1.5 text-sm font-medium text-white'
-                  : 'rounded-full border border-line px-3 py-1.5 text-sm font-medium'
-              }
-            >
-              Tous
-            </button>
-            {PROFILS.map((entree) => (
+          <div className="border-b border-line px-3 py-3 sm:px-4">
+            <div className="bandeau-defilant flex items-center gap-2">
+              <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-line bg-paper px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted sm:tracking-[0.14em]">
+                <Users className="size-4 shrink-0 text-green" aria-hidden />
+                Profils
+              </span>
               <button
-                key={entree.valeur}
                 type="button"
                 onClick={() => {
                   setPage(0)
-                  setProfil(entree.valeur)
+                  setProfil('tous')
                 }}
-                className={
-                  profil === entree.valeur
-                    ? 'rounded-full bg-ink px-3 py-1.5 text-sm font-medium text-white'
-                    : 'rounded-full border border-line px-3 py-1.5 text-sm font-medium'
-                }
+                className={puceFiltreDate(profil === 'tous')}
               >
-                {entree.libelle}
+                Tous
               </button>
-            ))}
+              {PROFILS.map((entree) => (
+                <button
+                  key={entree.valeur}
+                  type="button"
+                  onClick={() => {
+                    setPage(0)
+                    setProfil(entree.valeur)
+                  }}
+                  className={puceFiltreDate(profil === entree.valeur)}
+                >
+                  {entree.libelle}
+                </button>
+              ))}
+            </div>
           </div>
           {ajout && (
             <div className="border-b border-line p-4">
@@ -493,7 +499,62 @@ export function AdminPage() {
             </div>
           )}
 
-          <div className={`overflow-x-auto ${listeEnCours ? 'opacity-60' : ''}`}>
+          <div className={`divide-y divide-line lg:hidden ${listeEnCours ? 'opacity-60' : ''}`}>
+            {lignes.map((ligne) => (
+              <article key={ligne.id} className="p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <Link to={`/admin/participants/${ligne.id}`} className="font-mono text-sm font-semibold break-all text-red">
+                    {ligne.code}
+                  </Link>
+                  {peutSupprimer && (
+                    <button
+                      type="button"
+                      onClick={() => setASupprimer(ligne)}
+                      aria-label={`Supprimer ${nomComplet(ligne)}`}
+                      className="shrink-0 rounded-full p-2 text-muted hover:bg-red/10 hover:text-red"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  )}
+                </div>
+                <Link to={`/admin/participants/${ligne.id}`} className="mt-1 block text-base font-semibold text-ink">
+                  {nomComplet(ligne)}
+                </Link>
+                <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
+                  {libelleProfil(ligne.profil) ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Users className="size-3.5 shrink-0 text-green" aria-hidden />
+                      {libelleProfil(ligne.profil)}
+                    </span>
+                  ) : null}
+                  {libelleDates(ligne.dates, joursDispo) ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <CalendarDays className="size-3.5 shrink-0 text-red" aria-hidden />
+                      {libelleDates(ligne.dates, joursDispo)}
+                    </span>
+                  ) : null}
+                </p>
+                <dl className="mt-3 space-y-1.5 text-sm">
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Contact</dt>
+                    <dd className="break-all">{ligne.email || '—'}</dd>
+                    <dd className="text-muted">{ligne.telephone || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Statut</dt>
+                    <dd className="font-medium">{libelleStatutParticipant(ligne, joursDispo)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Inscrit le</dt>
+                    <dd className="text-muted">{formatQuand(ligne.created_at)}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+            {lignes.length === 0 && <p className="px-4 py-8 text-center text-muted">Aucun participant.</p>}
+          </div>
+
+          <div className={`hidden overflow-x-auto lg:block ${listeEnCours ? 'opacity-60' : ''}`}>
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="text-xs uppercase tracking-[0.14em] text-muted">
                 <tr>
@@ -566,11 +627,11 @@ export function AdminPage() {
             </table>
           </div>
 
-          <div className="flex items-center justify-between border-t border-line px-4 py-3 text-sm">
-            <span className="text-muted">
+          <div className="flex flex-col gap-3 border-t border-line px-3 py-3 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-4">
+            <span className="text-center text-muted sm:text-left">
               {total} inscription{total > 1 ? 's' : ''}
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2 sm:justify-end">
               <button
                 type="button"
                 disabled={page === 0}

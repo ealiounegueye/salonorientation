@@ -109,10 +109,10 @@ export function AdminParticipantPage() {
         {introuvable && <p className="mt-6 text-muted">Participant introuvable.</p>}
 
         {participant && (
-          <div className="mt-4 grid gap-4 rounded-2xl border border-line bg-white p-6 sm:grid-cols-[auto_1fr]">
-            <div>
+          <div className="mt-4 grid gap-6 rounded-2xl border border-line bg-white p-4 sm:p-6 lg:grid-cols-[auto_1fr]">
+            <div className="flex flex-col items-center sm:items-start">
               <QrBadge value={participant.code} />
-              <InfosLieu className="mt-2" />
+              <InfosLieu className="mt-2 max-w-full text-center sm:text-left" />
             </div>
             <div>
               <p className="font-mono text-sm font-semibold break-all text-red">{participant.code}</p>
