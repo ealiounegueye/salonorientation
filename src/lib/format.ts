@@ -43,6 +43,20 @@ export function formatQuand(iso: string | null) {
   return dateur.format(new Date(iso))
 }
 
+const dateurCourt = new Intl.DateTimeFormat('fr-FR', {
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'Africa/Dakar',
+})
+
+/** Date d’inscription compacte pour la liste mobile. */
+export function formatQuandCourt(iso: string | null) {
+  if (!iso) return '—'
+  return dateurCourt.format(new Date(iso))
+}
+
 export function nomComplet(personne: { prenom: string; nom: string }) {
   return `${personne.prenom} ${personne.nom}`
 }

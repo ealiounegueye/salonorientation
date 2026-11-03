@@ -18,6 +18,7 @@ import {
   extraireCode,
   filtreRecherche,
   formatQuand,
+  formatQuandCourt,
   JOURS,
   libelleDates,
   libelleProfil,
@@ -511,10 +512,10 @@ export function AdminPage() {
             <table className="w-full min-w-full table-fixed text-left text-xs sm:text-sm">
               <thead className="text-[10px] uppercase tracking-[0.12em] text-muted sm:text-xs sm:tracking-[0.14em]">
                 <tr className="border-b border-line">
-                  <th className="w-[22%] px-2 py-2 font-semibold sm:w-[6.5rem] sm:px-4 sm:py-3">Code</th>
-                  <th className="w-[46%] px-2 py-2 font-semibold sm:w-auto sm:px-4 sm:py-3">Participant</th>
+                  <th className="w-[5.25rem] px-2 py-2 font-semibold sm:w-[6.5rem] sm:px-4 sm:py-3">Code</th>
+                  <th className="min-w-0 px-2 py-2 font-semibold sm:px-4 sm:py-3">Participant</th>
                   <th className="hidden w-[18%] px-4 py-3 font-semibold md:table-cell">Contact</th>
-                  <th className="w-[24%] px-2 py-2 font-semibold sm:w-[8rem] sm:px-4 sm:py-3">Statut</th>
+                  <th className="hidden w-[8rem] px-2 py-2 font-semibold md:table-cell md:px-4 md:py-3">Statut</th>
                   <th className="hidden px-4 py-3 font-semibold lg:table-cell">Inscrit le</th>
                   <th className="w-10 px-1 py-2 sm:w-12 sm:px-4 sm:py-3">
                     <span className="sr-only">Actions</span>
@@ -524,7 +525,7 @@ export function AdminPage() {
               <tbody>
                 {lignes.map((ligne) => (
                   <tr key={ligne.id} className="border-t border-line hover:bg-paper">
-                    <td className="px-2 py-2 align-middle sm:px-4 sm:py-3">
+                    <td className="px-2 py-2 align-top sm:px-4 sm:py-3">
                       <Link
                         to={`/admin/participants/${ligne.id}`}
                         className="block truncate font-mono text-[11px] font-semibold text-red sm:text-xs"
@@ -533,41 +534,50 @@ export function AdminPage() {
                         {ligne.code}
                       </Link>
                     </td>
-                    <td className="px-2 py-2 align-middle sm:px-4 sm:py-3">
+                    <td className="px-2 py-2 align-top sm:px-4 sm:py-3">
                       <Link to={`/admin/participants/${ligne.id}`} className="block min-w-0">
-                        <p className="truncate font-medium leading-snug" title={nomComplet(ligne)}>
-                          {nomComplet(ligne)}
-                        </p>
-                        <div className="mt-1 space-y-0.5 text-[10px] leading-snug text-muted sm:text-[11px]">
-                          <p className="truncate lg:hidden" title={formatQuand(ligne.created_at)}>
-                            Inscrit · {formatQuand(ligne.created_at)}
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="min-w-0 truncate font-medium leading-snug" title={nomComplet(ligne)}>
+                            {nomComplet(ligne)}
                           </p>
+                          <span
+                            className="max-w-[45%] shrink-0 text-right text-[10px] leading-tight font-medium text-ink md:hidden"
+                            title={libelleStatutParticipant(ligne, joursDispo)}
+                          >
+                            {libelleStatutParticipant(ligne, joursDispo)}
+                          </span>
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] leading-snug text-muted sm:gap-x-2.5 sm:text-[11px]">
+                          <span className="inline-flex shrink-0 items-center gap-1 lg:hidden" title={formatQuand(ligne.created_at)}>
+                            <CalendarDays className="size-3 shrink-0 text-muted" aria-hidden />
+                            {formatQuandCourt(ligne.created_at)}
+                          </span>
                           {libelleProfil(ligne.profil) ? (
-                            <p className="flex min-w-0 items-center gap-1 truncate">
+                            <span className="inline-flex max-w-full min-w-0 items-center gap-1">
                               <Users className="size-3 shrink-0 text-green" aria-hidden />
                               <span className="truncate">{libelleProfil(ligne.profil)}</span>
-                            </p>
+                            </span>
                           ) : null}
                           {libelleDates(ligne.dates, joursDispo) ? (
-                            <p className="flex min-w-0 items-center gap-1 truncate">
+                            <span className="inline-flex max-w-full min-w-0 items-center gap-1">
                               <CalendarDays className="size-3 shrink-0 text-red" aria-hidden />
                               <span className="truncate">{libelleDates(ligne.dates, joursDispo)}</span>
-                            </p>
+                            </span>
                           ) : null}
                         </div>
                       </Link>
                     </td>
-                    <td className="hidden px-4 py-3 align-middle md:table-cell">
+                    <td className="hidden px-4 py-3 align-top md:table-cell">
                       <p className="truncate">{ligne.email}</p>
                       <p className="truncate text-muted">{ligne.telephone || '—'}</p>
                     </td>
-                    <td className="px-2 py-2 align-middle sm:px-4 sm:py-3">
-                      <span className="line-clamp-2 text-[10px] font-medium leading-snug sm:text-sm" title={libelleStatutParticipant(ligne, joursDispo)}>
+                    <td className="hidden px-2 py-2 align-top md:table-cell md:px-4 md:py-3">
+                      <span className="line-clamp-3 text-sm font-medium leading-snug" title={libelleStatutParticipant(ligne, joursDispo)}>
                         {libelleStatutParticipant(ligne, joursDispo)}
                       </span>
                     </td>
                     <td className="hidden px-4 py-3 align-middle text-muted lg:table-cell">{formatQuand(ligne.created_at)}</td>
-                    <td className="px-1 py-2 text-right align-middle sm:px-4 sm:py-3">
+                    <td className="px-1 py-2 text-right align-top sm:px-4 sm:py-3">
                       {peutSupprimer && (
                         <button
                           type="button"
