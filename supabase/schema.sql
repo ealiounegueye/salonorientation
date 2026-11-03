@@ -100,6 +100,12 @@ alter table public.participants
   add constraint participants_profil_check
   check (profil is null or profil in ('professionnel', 'etudiant', 'chercheur', 'visiteur'));
 
+alter table public.participants add column if not exists sur_place boolean not null default false;
+
+create index if not exists participants_sur_place_idx
+  on public.participants (sur_place)
+  where sur_place;
+
 -- ---------------------------------------------------------------------------
 -- Les comptes admin se créent depuis la page Équipe.
 -- Aucun trigger : un compte Auth créé autrement n'a pas de profil admin.

@@ -1,3 +1,4 @@
+import { normaliserJoursPresents } from './presence'
 import type { ProfilParticipant, SexeParticipant, StatutParticipant } from '../types'
 
 export const JOURS = ['18', '19', '20'] as const
@@ -57,6 +58,24 @@ export const LIBELLE_STATUT: Record<StatutParticipant, string> = {
   inscrit: 'Inscrit',
   present: 'Présent',
   annule: 'Annulé',
+}
+
+/** Jours pointés au scan (ex. « 18 nov., 19 nov. »). */
+export function libelleJoursPointage(jours: string[] | null | undefined) {
+  const liste = normaliserJoursPresents(jours)
+  if (!liste.length) return ''
+  return liste.map((jour) => `${jour} nov.`).join(', ')
+}
+
+/** Statut affiché avec les jours de présence cumulés après chaque scan. */
+export function libelleStatutParticipant(
+  participant: { statut: StatutParticipant; jours_presents?: string[] | null },
+  _joursSalon: readonly string[] = JOURS,
+) {
+  const base = LIBELLE_STATUT[participant.statut]
+  if (participant.statut !== 'present') return base
+  const jours = libelleJoursPointage(participant.jours_presents)
+  return jours ? `${base} · ${jours}` : base
 }
 
 export function filtreRecherche(saisie: string) {

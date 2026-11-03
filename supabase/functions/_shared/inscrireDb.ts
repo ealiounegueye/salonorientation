@@ -131,6 +131,7 @@ export async function inscrireParticipant(
     age: champs.age,
     sexe,
     statut: 'inscrit' as const,
+    sur_place: champs.admin,
   }
 
   for (let essai = 0; essai < 5; essai += 1) {

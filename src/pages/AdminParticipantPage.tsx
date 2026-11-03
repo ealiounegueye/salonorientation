@@ -7,7 +7,14 @@ import { QrBadge } from '../components/QrBadge'
 import { renvoyerBadge } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import { peutGererFicheParticipant, peutSupprimerParticipant } from '../lib/permissions'
-import { formatQuand, libelleDates, libelleProfil, libelleSexe, LIBELLE_STATUT, nomComplet } from '../lib/format'
+import {
+  formatQuand,
+  libelleDates,
+  libelleProfil,
+  libelleSexe,
+  libelleStatutParticipant,
+  nomComplet,
+} from '../lib/format'
 import { jourSalonDakar, joursPresentsApresScan, normaliserJoursPresents } from '../lib/presence'
 import { lireParametres } from '../lib/parametres'
 import { supabase } from '../lib/supabase'
@@ -145,7 +152,7 @@ export function AdminParticipantPage() {
                 </div>
                 <div>
                   <dt className="inline text-muted">Statut : </dt>
-                  <dd className="inline">{LIBELLE_STATUT[participant.statut]}</dd>
+                  <dd className="inline">{libelleStatutParticipant(participant)}</dd>
                 </div>
                 <div>
                   <dt className="inline text-muted">Inscrit le : </dt>

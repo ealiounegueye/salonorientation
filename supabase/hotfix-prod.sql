@@ -36,6 +36,12 @@ create index if not exists inscription_tentatives_ip_idx
 alter table public.inscription_tentatives enable row level security;
 revoke all on table public.inscription_tentatives from public, anon, authenticated;
 
+alter table public.participants add column if not exists sur_place boolean not null default false;
+
+create index if not exists participants_sur_place_idx
+  on public.participants (sur_place)
+  where sur_place;
+
 alter table public.participants alter column email drop not null;
 
 drop index if exists public.participants_email_lower_idx;

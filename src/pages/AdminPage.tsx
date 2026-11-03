@@ -14,7 +14,17 @@ import {
 } from '../lib/permissions'
 import { chargerParticipants, exporterExcel, exporterPdf } from '../lib/export'
 import { calculerStats } from '../lib/stats'
-import { extraireCode, filtreRecherche, formatQuand, JOURS, libelleDates, libelleProfil, LIBELLE_STATUT, nomComplet, PROFILS } from '../lib/format'
+import {
+  extraireCode,
+  filtreRecherche,
+  formatQuand,
+  JOURS,
+  libelleDates,
+  libelleProfil,
+  libelleStatutParticipant,
+  nomComplet,
+  PROFILS,
+} from '../lib/format'
 import { demanderAccesCamera } from '../lib/camera'
 import {
   jourPointageScan,
@@ -27,10 +37,12 @@ import { supabase } from '../lib/supabase'
 import type { Participant, StatutParticipant } from '../types'
 
 const PAGE = 10
-const FILTRES: Array<{ id: 'tous' | StatutParticipant; label: string }> = [
+type FiltreListe = 'tous' | StatutParticipant | 'sur_place'
+const FILTRES: Array<{ id: FiltreListe; label: string }> = [
   { id: 'tous', label: 'Tous' },
   { id: 'inscrit', label: 'Inscrits' },
   { id: 'present', label: 'Présents' },
+  { id: 'sur_place', label: 'Enregistrés sur place' },
 ]
 
 export function AdminPage() {
@@ -43,7 +55,7 @@ export function AdminPage() {
   const [total, setTotal] = useState(0)
   const [recherche, setRecherche] = useState('')
   const [saisie, setSaisie] = useState('')
-  const [filtre, setFiltre] = useState<(typeof FILTRES)[number]['id']>('tous')
+  const [filtre, setFiltre] = useState<FiltreListe>('tous')
   const [joursDispo, setJoursDispo] = useState<string[]>([...JOURS])
   const [correctionJour, setCorrectionJour] = useState(false)
   const [jourScanManuel, setJourScanManuel] = useState('')
@@ -92,7 +104,8 @@ export function AdminPage() {
       .from('participants')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
-    if (filtre !== 'tous') liste = liste.eq('statut', filtre)
+    if (filtre === 'sur_place') liste = liste.eq('sur_place', true)
+    else if (filtre !== 'tous') liste = liste.eq('statut', filtre)
     if (profil !== 'tous') liste = liste.eq('profil', profil)
     if (jour !== 'toutes') liste = liste.contains('jours_sel', [jour])
     if (filtreTexte) liste = liste.or(filtreTexte)
@@ -219,7 +232,8 @@ export function AdminPage() {
   async function exporter(format: 'xlsx' | 'pdf') {
     setExportEnCours(true)
     const toutes = await chargerParticipants({
-      statut: filtre,
+      statut: filtre === 'sur_place' ? 'tous' : filtre,
+      surPlace: filtre === 'sur_place',
       profil,
       jour,
       recherche,
@@ -523,7 +537,9 @@ export function AdminPage() {
                       <p>{ligne.email}</p>
                       <p className="text-muted">{ligne.telephone || '—'}</p>
                     </td>
-                    <td className="px-4 py-3">{LIBELLE_STATUT[ligne.statut]}</td>
+                    <td className="px-4 py-3">
+                      <span className="font-medium">{libelleStatutParticipant(ligne, joursDispo)}</span>
+                    </td>
                     <td className="px-4 py-3 text-muted">{formatQuand(ligne.created_at)}</td>
                     <td className="px-4 py-3 text-right">
                       {peutSupprimer && (

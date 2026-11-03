@@ -3,7 +3,14 @@ import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import type { Participant, StatutParticipant } from '../types'
 import { evenement } from './evenement'
-import { formatQuand, filtreRecherche, libelleDates, libelleProfil, libelleSexe, LIBELLE_STATUT } from './format'
+import {
+  formatQuand,
+  filtreRecherche,
+  libelleDates,
+  libelleProfil,
+  libelleSexe,
+  libelleStatutParticipant,
+} from './format'
 import type { StatsSalon } from './stats'
 import { supabase } from './supabase'
 
@@ -19,11 +26,13 @@ const ENTETES = [
   'Dates',
   'Jours présents',
   'Statut',
+  'Sur place',
   'Inscrit le',
 ] as const
 
 export type FiltresExport = {
   statut?: 'tous' | StatutParticipant
+  surPlace?: boolean
   profil?: string
   jour?: string
   recherche?: string
@@ -45,7 +54,8 @@ function lignesTableau(participants: Participant[]) {
     libelleProfil(ligne.profil),
     libelleDates(ligne.dates),
     libelleDates(ligne.jours_presents?.length ? ligne.jours_presents.join(',') : null),
-    LIBELLE_STATUT[ligne.statut],
+    libelleStatutParticipant(ligne),
+    ligne.sur_place === true ? 'Oui' : 'Non',
     formatQuand(ligne.created_at),
   ])
 }
@@ -55,7 +65,8 @@ export async function chargerParticipants(filtres?: FiltresExport): Promise<Part
   const filtreTexte = filtres?.recherche ? filtreRecherche(filtres.recherche) : null
   for (let from = 0; from < 20000; from += 1000) {
     let requete = supabase.from('participants').select('*').order('created_at', { ascending: false })
-    if (filtres?.statut && filtres.statut !== 'tous') requete = requete.eq('statut', filtres.statut)
+    if (filtres?.surPlace) requete = requete.eq('sur_place', true)
+    else if (filtres?.statut && filtres.statut !== 'tous') requete = requete.eq('statut', filtres.statut)
     if (filtres?.profil && filtres.profil !== 'tous') requete = requete.eq('profil', filtres.profil)
     if (filtres?.jour && filtres.jour !== 'toutes') requete = requete.contains('jours_sel', [filtres.jour])
     if (filtreTexte) requete = requete.or(filtreTexte)
@@ -94,6 +105,7 @@ export function exporterExcel(participants: Participant[]) {
     { wch: 14 },
     { wch: 18 },
     { wch: 16 },
+    { wch: 10 },
     { wch: 10 },
     { wch: 18 },
   ]
