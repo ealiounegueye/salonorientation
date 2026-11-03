@@ -512,12 +512,12 @@ export function AdminPage() {
             <table className="w-full table-fixed text-left text-xs sm:text-sm">
               <thead className="text-[9px] uppercase tracking-[0.1em] text-muted sm:text-xs sm:tracking-[0.14em]">
                 <tr className="border-b border-line">
-                  <th className="w-[17%] px-1 py-2 font-semibold md:w-[6.5rem] sm:px-4 sm:py-3">Code</th>
-                  <th className="w-[31%] min-w-0 px-1 py-2 font-semibold md:w-auto sm:px-4 sm:py-3">Participant</th>
+                  <th className="w-[24%] px-1 py-2 font-semibold md:w-[6.5rem] sm:px-4 sm:py-3">Code</th>
+                  <th className="w-[27%] min-w-0 px-1 py-2 font-semibold md:w-auto sm:px-4 sm:py-3">Participant</th>
                   <th className="hidden w-[18%] px-4 py-3 font-semibold md:table-cell">Contact</th>
-                  <th className="w-[20%] px-0.5 py-2 font-semibold md:w-[7rem] sm:px-4 sm:py-3">Statut</th>
-                  <th className="w-[22%] px-0.5 py-2 font-semibold leading-tight md:w-auto sm:px-4 sm:py-3">Inscrit le</th>
-                  <th className="w-8 px-0 py-2 sm:w-12 sm:px-4 sm:py-3">
+                  <th className="w-[15%] px-0.5 py-2 font-semibold md:w-[7rem] sm:px-4 sm:py-3">Statut</th>
+                  <th className="w-[26%] px-0.5 py-2 font-semibold leading-tight md:w-auto sm:px-4 sm:py-3">Inscrit le</th>
+                  <th className="w-[8%] px-0 py-2 sm:w-12 sm:px-4 sm:py-3">
                     <span className="sr-only">Actions</span>
                   </th>
                 </tr>
@@ -525,10 +525,10 @@ export function AdminPage() {
               <tbody>
                 {lignes.map((ligne) => (
                   <tr key={ligne.id} className="border-t border-line hover:bg-paper">
-                    <td className="px-2 py-2 align-top sm:px-4 sm:py-3">
+                    <td className="px-1 py-2 align-top sm:px-4 sm:py-3">
                       <Link
                         to={`/admin/participants/${ligne.id}`}
-                        className="block truncate font-mono text-[11px] font-semibold text-red sm:text-xs"
+                        className="block break-all font-mono text-[10px] leading-tight font-semibold text-red sm:text-xs"
                         title={ligne.code}
                       >
                         {ligne.code}
@@ -582,9 +582,9 @@ export function AdminPage() {
                           type="button"
                           onClick={() => setASupprimer(ligne)}
                           aria-label={`Supprimer ${nomComplet(ligne)}`}
-                          className="rounded-full p-1.5 text-muted hover:bg-red/10 hover:text-red sm:p-2"
+                          className="rounded-full p-1 text-muted hover:bg-red/10 hover:text-red sm:p-2"
                         >
-                          <Trash2 className="size-4" />
+                          <Trash2 className="size-3.5 sm:size-4" />
                         </button>
                       )}
                     </td>
