@@ -380,61 +380,63 @@ export function AdminPage() {
                 className="w-full rounded-full border border-line bg-paper py-2.5 pr-4 pl-9 outline-none ring-red/20 focus:ring-4"
               />
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {FILTRES.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    setPage(0)
-                    setFiltre(item.id)
-                  }}
-                  className={puceFiltre(filtre === item.id)}
-                >
-                  {item.court ? (
-                    <>
-                      <span className="md:hidden">{item.court}</span>
-                      <span className="hidden md:inline">{item.label}</span>
-                    </>
-                  ) : (
-                    item.label
-                  )}
-                </button>
-              ))}
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {peutAjouter && (
-                <button
-                  type="button"
-                  onClick={() => setAjout((ouvert) => !ouvert)}
-                  className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-line px-3 py-2 text-sm font-medium hover:border-red/40"
-                >
-                  <UserPlus className="size-4" />
-                  Ajouter
-                </button>
-              )}
-              {peutExporter && (
-                <>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
+              <div className="flex flex-wrap items-center gap-2">
+                {FILTRES.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setPage(0)
+                      setFiltre(item.id)
+                    }}
+                    className={puceFiltre(filtre === item.id)}
+                  >
+                    {item.court ? (
+                      <>
+                        <span className="md:hidden">{item.court}</span>
+                        <span className="hidden md:inline">{item.label}</span>
+                      </>
+                    ) : (
+                      item.label
+                    )}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 md:shrink-0 md:justify-end">
+                {peutAjouter && (
                   <button
                     type="button"
-                    onClick={() => void exporter('xlsx')}
-                    disabled={exportEnCours}
-                    className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-line px-3 py-2 text-sm font-medium hover:border-red/40 disabled:opacity-60"
+                    onClick={() => setAjout((ouvert) => !ouvert)}
+                    className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-line px-3 py-2 text-sm font-medium hover:border-red/40"
                   >
-                    <FileSpreadsheet className="size-4" />
-                    {exportEnCours ? 'Export…' : 'Excel'}
+                    <UserPlus className="size-4" />
+                    Ajouter
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => void exporter('pdf')}
-                    disabled={exportEnCours}
-                    className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-line px-3 py-2 text-sm font-medium hover:border-red/40 disabled:opacity-60"
-                  >
-                    <FileText className="size-4" />
-                    PDF
-                  </button>
-                </>
-              )}
+                )}
+                {peutExporter && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => void exporter('xlsx')}
+                      disabled={exportEnCours}
+                      className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-line px-3 py-2 text-sm font-medium hover:border-red/40 disabled:opacity-60"
+                    >
+                      <FileSpreadsheet className="size-4" />
+                      {exportEnCours ? 'Export…' : 'Excel'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void exporter('pdf')}
+                      disabled={exportEnCours}
+                      className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-line px-3 py-2 text-sm font-medium hover:border-red/40 disabled:opacity-60"
+                    >
+                      <FileText className="size-4" />
+                      PDF
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
           <div className="border-b border-line px-3 py-3 sm:px-4">
@@ -500,6 +502,7 @@ export function AdminPage() {
               ))}
             </div>
           </div>
+          <div className="h-0.5 bg-green" role="presentation" aria-hidden />
           {ajout && (
             <div className="border-b border-line p-4">
               <AjoutParticipant
