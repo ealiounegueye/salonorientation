@@ -511,10 +511,10 @@ export function AdminPage() {
             <table className="w-full min-w-full table-fixed text-left text-xs sm:text-sm">
               <thead className="text-[10px] uppercase tracking-[0.12em] text-muted sm:text-xs sm:tracking-[0.14em]">
                 <tr className="border-b border-line">
-                  <th className="w-[26%] px-2 py-2 font-semibold sm:w-[7rem] sm:px-4 sm:py-3">Code</th>
-                  <th className="w-[34%] px-2 py-2 font-semibold sm:w-auto sm:px-4 sm:py-3">Participant</th>
+                  <th className="w-[22%] px-2 py-2 font-semibold sm:w-[6.5rem] sm:px-4 sm:py-3">Code</th>
+                  <th className="w-[46%] px-2 py-2 font-semibold sm:w-auto sm:px-4 sm:py-3">Participant</th>
                   <th className="hidden w-[18%] px-4 py-3 font-semibold md:table-cell">Contact</th>
-                  <th className="w-[28%] px-2 py-2 font-semibold sm:w-[9rem] sm:px-4 sm:py-3">Statut</th>
+                  <th className="w-[24%] px-2 py-2 font-semibold sm:w-[8rem] sm:px-4 sm:py-3">Statut</th>
                   <th className="hidden px-4 py-3 font-semibold lg:table-cell">Inscrit le</th>
                   <th className="w-10 px-1 py-2 sm:w-12 sm:px-4 sm:py-3">
                     <span className="sr-only">Actions</span>
@@ -535,13 +535,26 @@ export function AdminPage() {
                     </td>
                     <td className="px-2 py-2 align-middle sm:px-4 sm:py-3">
                       <Link to={`/admin/participants/${ligne.id}`} className="block min-w-0">
-                        <p className="truncate font-medium" title={nomComplet(ligne)}>
+                        <p className="truncate font-medium leading-snug" title={nomComplet(ligne)}>
                           {nomComplet(ligne)}
                         </p>
-                        <p className="mt-0.5 hidden truncate text-[11px] text-muted md:block">
-                          {[libelleProfil(ligne.profil), libelleDates(ligne.dates, joursDispo)].filter(Boolean).join(' · ') ||
-                            '—'}
-                        </p>
+                        <div className="mt-1 space-y-0.5 text-[10px] leading-snug text-muted sm:text-[11px]">
+                          <p className="truncate lg:hidden" title={formatQuand(ligne.created_at)}>
+                            Inscrit · {formatQuand(ligne.created_at)}
+                          </p>
+                          {libelleProfil(ligne.profil) ? (
+                            <p className="flex min-w-0 items-center gap-1 truncate">
+                              <Users className="size-3 shrink-0 text-green" aria-hidden />
+                              <span className="truncate">{libelleProfil(ligne.profil)}</span>
+                            </p>
+                          ) : null}
+                          {libelleDates(ligne.dates, joursDispo) ? (
+                            <p className="flex min-w-0 items-center gap-1 truncate">
+                              <CalendarDays className="size-3 shrink-0 text-red" aria-hidden />
+                              <span className="truncate">{libelleDates(ligne.dates, joursDispo)}</span>
+                            </p>
+                          ) : null}
+                        </div>
                       </Link>
                     </td>
                     <td className="hidden px-4 py-3 align-middle md:table-cell">
