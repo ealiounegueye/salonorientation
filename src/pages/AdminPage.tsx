@@ -47,13 +47,20 @@ const FILTRES: Array<{ id: FiltreListe; label: string; court?: string }> = [
 
 const puceFiltre = (actif: boolean) =>
   actif
-    ? 'shrink-0 whitespace-nowrap rounded-full bg-red px-3 py-2 text-sm font-medium text-white'
-    : 'shrink-0 whitespace-nowrap rounded-full border border-line px-3 py-2 text-sm font-medium'
+    ? 'shrink-0 whitespace-nowrap rounded-full bg-red px-2.5 py-1.5 text-xs font-medium text-white sm:px-3 sm:py-2 sm:text-sm'
+    : 'shrink-0 whitespace-nowrap rounded-full border border-line px-2.5 py-1.5 text-xs font-medium sm:px-3 sm:py-2 sm:text-sm'
 
 const puceFiltreDate = (actif: boolean) =>
   actif
-    ? 'shrink-0 whitespace-nowrap rounded-full bg-ink px-3 py-2 text-sm font-medium text-white'
-    : 'shrink-0 whitespace-nowrap rounded-full border border-line px-3 py-2 text-sm font-medium'
+    ? 'shrink-0 whitespace-nowrap rounded-full bg-ink px-2.5 py-1.5 text-xs font-medium text-white sm:px-3 sm:py-2 sm:text-sm'
+    : 'shrink-0 whitespace-nowrap rounded-full border border-line px-2.5 py-1.5 text-xs font-medium sm:px-3 sm:py-2 sm:text-sm'
+
+const PROFIL_FILTRE_COURT: Record<string, string> = {
+  professionnel: 'Pro',
+  etudiant: 'Étud.',
+  chercheur: 'Emploi',
+  visiteur: 'Visiteur',
+}
 
 export function AdminPage() {
   const { configured, profile } = useAuth()
@@ -361,7 +368,7 @@ export function AdminPage() {
           </label>
         </form>
 
-        <section className="rounded-2xl border border-line bg-white">
+        <section className="overflow-hidden rounded-2xl border border-line bg-white">
           <div className="flex flex-col gap-3 border-b border-line p-3 sm:p-4">
             <div className="relative min-w-0 w-full">
               <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
@@ -372,7 +379,7 @@ export function AdminPage() {
                 className="w-full rounded-full border border-line bg-paper py-2.5 pr-4 pl-9 outline-none ring-red/20 focus:ring-4"
               />
             </div>
-            <div className="bandeau-defilant -mx-1 flex items-center gap-2 px-1 pb-0.5 md:flex-wrap md:overflow-visible">
+            <div className="flex flex-wrap items-center gap-2">
               {FILTRES.map((item) => (
                 <button
                   key={item.id}
@@ -394,7 +401,7 @@ export function AdminPage() {
                 </button>
               ))}
             </div>
-            <div className="bandeau-defilant -mx-1 flex items-center gap-2 px-1 pb-0.5 md:flex-wrap md:overflow-visible">
+            <div className="flex flex-wrap items-center gap-2">
               {peutAjouter && (
                 <button
                   type="button"
@@ -430,9 +437,9 @@ export function AdminPage() {
             </div>
           </div>
           <div className="border-b border-line px-3 py-3 sm:px-4">
-            <div className="bandeau-defilant flex items-center gap-2">
-              <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-line bg-paper px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted sm:tracking-[0.14em]">
-                <CalendarDays className="size-4 shrink-0 text-red" aria-hidden />
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-line bg-paper px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted sm:px-3 sm:text-xs sm:tracking-[0.14em]">
+                <CalendarDays className="size-3.5 shrink-0 text-red sm:size-4" aria-hidden />
                 Date
               </span>
               <button
@@ -461,9 +468,9 @@ export function AdminPage() {
             </div>
           </div>
           <div className="border-b border-line px-3 py-3 sm:px-4">
-            <div className="bandeau-defilant flex items-center gap-2">
-              <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-line bg-paper px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted sm:tracking-[0.14em]">
-                <Users className="size-4 shrink-0 text-green" aria-hidden />
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex w-full shrink-0 items-center gap-2 rounded-full border border-line bg-paper px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted sm:w-auto sm:px-3 sm:text-xs sm:tracking-[0.14em]">
+                <Users className="size-3.5 shrink-0 text-green sm:size-4" aria-hidden />
                 Profils
               </span>
               <button
@@ -486,7 +493,8 @@ export function AdminPage() {
                   }}
                   className={puceFiltreDate(profil === entree.valeur)}
                 >
-                  {entree.libelle}
+                  <span className="sm:hidden">{PROFIL_FILTRE_COURT[entree.valeur] ?? entree.libelle}</span>
+                  <span className="hidden sm:inline">{entree.libelle}</span>
                 </button>
               ))}
             </div>
@@ -499,71 +507,16 @@ export function AdminPage() {
             </div>
           )}
 
-          <div className={`divide-y divide-line lg:hidden ${listeEnCours ? 'opacity-60' : ''}`}>
-            {lignes.map((ligne) => (
-              <article key={ligne.id} className="p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <Link to={`/admin/participants/${ligne.id}`} className="font-mono text-sm font-semibold break-all text-red">
-                    {ligne.code}
-                  </Link>
-                  {peutSupprimer && (
-                    <button
-                      type="button"
-                      onClick={() => setASupprimer(ligne)}
-                      aria-label={`Supprimer ${nomComplet(ligne)}`}
-                      className="shrink-0 rounded-full p-2 text-muted hover:bg-red/10 hover:text-red"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  )}
-                </div>
-                <Link to={`/admin/participants/${ligne.id}`} className="mt-1 block text-base font-semibold text-ink">
-                  {nomComplet(ligne)}
-                </Link>
-                <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
-                  {libelleProfil(ligne.profil) ? (
-                    <span className="inline-flex items-center gap-1.5">
-                      <Users className="size-3.5 shrink-0 text-green" aria-hidden />
-                      {libelleProfil(ligne.profil)}
-                    </span>
-                  ) : null}
-                  {libelleDates(ligne.dates, joursDispo) ? (
-                    <span className="inline-flex items-center gap-1.5">
-                      <CalendarDays className="size-3.5 shrink-0 text-red" aria-hidden />
-                      {libelleDates(ligne.dates, joursDispo)}
-                    </span>
-                  ) : null}
-                </p>
-                <dl className="mt-3 space-y-1.5 text-sm">
-                  <div>
-                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Contact</dt>
-                    <dd className="break-all">{ligne.email || '—'}</dd>
-                    <dd className="text-muted">{ligne.telephone || '—'}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Statut</dt>
-                    <dd className="font-medium">{libelleStatutParticipant(ligne, joursDispo)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Inscrit le</dt>
-                    <dd className="text-muted">{formatQuand(ligne.created_at)}</dd>
-                  </div>
-                </dl>
-              </article>
-            ))}
-            {lignes.length === 0 && <p className="px-4 py-8 text-center text-muted">Aucun participant.</p>}
-          </div>
-
-          <div className={`hidden overflow-x-auto lg:block ${listeEnCours ? 'opacity-60' : ''}`}>
-            <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="text-xs uppercase tracking-[0.14em] text-muted">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">Code</th>
-                  <th className="px-4 py-3 font-semibold">Participant</th>
-                  <th className="px-4 py-3 font-semibold">Contact</th>
-                  <th className="px-4 py-3 font-semibold">Statut</th>
-                  <th className="px-4 py-3 font-semibold">Inscrit le</th>
-                  <th className="px-4 py-3 font-semibold">
+          <div className={`min-w-0 overflow-x-auto ${listeEnCours ? 'opacity-60' : ''}`}>
+            <table className="w-full min-w-full table-fixed text-left text-xs sm:text-sm">
+              <thead className="text-[10px] uppercase tracking-[0.12em] text-muted sm:text-xs sm:tracking-[0.14em]">
+                <tr className="border-b border-line">
+                  <th className="w-[26%] px-2 py-2 font-semibold sm:w-[7rem] sm:px-4 sm:py-3">Code</th>
+                  <th className="w-[34%] px-2 py-2 font-semibold sm:w-auto sm:px-4 sm:py-3">Participant</th>
+                  <th className="hidden w-[18%] px-4 py-3 font-semibold md:table-cell">Contact</th>
+                  <th className="w-[28%] px-2 py-2 font-semibold sm:w-[9rem] sm:px-4 sm:py-3">Statut</th>
+                  <th className="hidden px-4 py-3 font-semibold lg:table-cell">Inscrit le</th>
+                  <th className="w-10 px-1 py-2 sm:w-12 sm:px-4 sm:py-3">
                     <span className="sr-only">Actions</span>
                   </th>
                 </tr>
@@ -571,44 +524,43 @@ export function AdminPage() {
               <tbody>
                 {lignes.map((ligne) => (
                   <tr key={ligne.id} className="border-t border-line hover:bg-paper">
-                    <td className="max-w-[11rem] px-4 py-3 font-mono text-xs font-semibold break-all">
-                      <Link to={`/admin/participants/${ligne.id}`} className="text-red">
+                    <td className="px-2 py-2 align-middle sm:px-4 sm:py-3">
+                      <Link
+                        to={`/admin/participants/${ligne.id}`}
+                        className="block truncate font-mono text-[11px] font-semibold text-red sm:text-xs"
+                        title={ligne.code}
+                      >
                         {ligne.code}
                       </Link>
                     </td>
-                    <td className="px-4 py-3">
-                      <p className="font-medium">{nomComplet(ligne)}</p>
-                      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted">
-                        {libelleProfil(ligne.profil) ? (
-                          <span className="inline-flex items-center gap-1.5">
-                            <Users className="size-3.5 shrink-0 text-green" aria-hidden />
-                            {libelleProfil(ligne.profil)}
-                          </span>
-                        ) : null}
-                        {libelleDates(ligne.dates, joursDispo) ? (
-                          <span className="inline-flex items-center gap-1.5">
-                            <CalendarDays className="size-3.5 shrink-0 text-red" aria-hidden />
-                            {libelleDates(ligne.dates, joursDispo)}
-                          </span>
-                        ) : null}
-                        {!libelleProfil(ligne.profil) && !libelleDates(ligne.dates, joursDispo) ? '—' : null}
-                      </p>
+                    <td className="px-2 py-2 align-middle sm:px-4 sm:py-3">
+                      <Link to={`/admin/participants/${ligne.id}`} className="block min-w-0">
+                        <p className="truncate font-medium" title={nomComplet(ligne)}>
+                          {nomComplet(ligne)}
+                        </p>
+                        <p className="mt-0.5 hidden truncate text-[11px] text-muted md:block">
+                          {[libelleProfil(ligne.profil), libelleDates(ligne.dates, joursDispo)].filter(Boolean).join(' · ') ||
+                            '—'}
+                        </p>
+                      </Link>
                     </td>
-                    <td className="px-4 py-3">
-                      <p>{ligne.email}</p>
-                      <p className="text-muted">{ligne.telephone || '—'}</p>
+                    <td className="hidden px-4 py-3 align-middle md:table-cell">
+                      <p className="truncate">{ligne.email}</p>
+                      <p className="truncate text-muted">{ligne.telephone || '—'}</p>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className="font-medium">{libelleStatutParticipant(ligne, joursDispo)}</span>
+                    <td className="px-2 py-2 align-middle sm:px-4 sm:py-3">
+                      <span className="line-clamp-2 text-[10px] font-medium leading-snug sm:text-sm" title={libelleStatutParticipant(ligne, joursDispo)}>
+                        {libelleStatutParticipant(ligne, joursDispo)}
+                      </span>
                     </td>
-                    <td className="px-4 py-3 text-muted">{formatQuand(ligne.created_at)}</td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="hidden px-4 py-3 align-middle text-muted lg:table-cell">{formatQuand(ligne.created_at)}</td>
+                    <td className="px-1 py-2 text-right align-middle sm:px-4 sm:py-3">
                       {peutSupprimer && (
                         <button
                           type="button"
                           onClick={() => setASupprimer(ligne)}
                           aria-label={`Supprimer ${nomComplet(ligne)}`}
-                          className="rounded-full p-2 text-muted hover:bg-red/10 hover:text-red"
+                          className="rounded-full p-1.5 text-muted hover:bg-red/10 hover:text-red sm:p-2"
                         >
                           <Trash2 className="size-4" />
                         </button>
