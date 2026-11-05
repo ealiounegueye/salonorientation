@@ -1,13 +1,19 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { AppHeader } from '../components/AppHeader'
 import { BoiteConfirmation } from '../components/BoiteConfirmation'
 import { useAuth } from '../context/AuthContext'
 import { gererEquipe } from '../lib/api'
 import { lireParametres, normaliserJours } from '../lib/parametres'
-import { libelleJourSalon } from '../lib/presence'
+import { jourSalonDakar, libelleJourSalon } from '../lib/presence'
 import { supabase } from '../lib/supabase'
 import type { Profile, Role } from '../types'
 import { libelleRole } from '../lib/permissions'
+import { JOURS } from '../lib/format'
+
+function joursSalonDepuisTexte(joursTexte: string) {
+  const jours = normaliserJours(joursTexte)
+  return jours.length ? jours : [...JOURS]
+}
 
 const champ =
   'w-full rounded-2xl border border-line bg-paper px-4 py-3 outline-none ring-red/20 placeholder:text-muted/70 focus:ring-4'
@@ -38,6 +44,7 @@ export function ReglagesPage() {
   const [messageOk, setMessageOk] = useState(true)
   const [envoi, setEnvoi] = useState(false)
   const [confirmArretCampagne, setConfirmArretCampagne] = useState(false)
+  const [horloge, setHorloge] = useState(() => Date.now())
 
   const charger = useCallback(async () => {
     const [campagneRes, equipeRes] = await Promise.all([
@@ -67,6 +74,23 @@ export function ReglagesPage() {
   useEffect(() => {
     void charger()
   }, [charger])
+
+  useEffect(() => {
+    const id = window.setInterval(() => setHorloge(Date.now()), 60_000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  const joursSalon = useMemo(() => joursSalonDepuisTexte(joursTexte), [joursTexte])
+
+  const jourSalonAujourdHui = useMemo(() => {
+    void horloge
+    return jourSalonDakar(joursSalon)
+  }, [horloge, joursSalon])
+
+  useEffect(() => {
+    if (!pointageForce) return
+    setJourPointage((actuel) => (joursSalon.includes(actuel) ? actuel : joursSalon[0] ?? ''))
+  }, [joursSalon, pointageForce])
 
   function signaler(ok: boolean, texte: string) {
     setMessageOk(ok)
@@ -125,11 +149,7 @@ export function ReglagesPage() {
 
   async function enregistrerPointage(event: FormEvent) {
     event.preventDefault()
-    const jours = normaliserJours(joursTexte)
-    if (jours.length === 0) {
-      signaler(false, 'Indiquez d’abord les jours du salon.')
-      return
-    }
+    const jours = joursSalonDepuisTexte(joursTexte)
     const jour = pointageForce ? jourPointage.trim() : ''
     if (pointageForce && (!jour || !jours.includes(jour))) {
       signaler(false, 'Choisissez un jour de pointage valide.')
@@ -301,7 +321,12 @@ export function ReglagesPage() {
                   type="radio"
                   name="mode-pointage"
                   checked={pointageForce}
-                  onChange={() => setPointageForce(true)}
+                  onChange={() => {
+                    setPointageForce(true)
+                    setJourPointage((actuel) =>
+                      joursSalon.includes(actuel) ? actuel : joursSalon[0] ?? '',
+                    )
+                  }}
                   className="mt-0.5 size-4 accent-red"
                 />
                 <span>
@@ -312,22 +337,76 @@ export function ReglagesPage() {
                 </span>
               </label>
             </fieldset>
-            {pointageForce && (
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium">Jour de pointage</span>
-                <select
-                  value={jourPointage}
-                  onChange={(event) => setJourPointage(event.target.value)}
-                  className={champ}
-                  required
-                >
-                  {normaliserJours(joursTexte).map((jour) => (
-                    <option key={jour} value={jour}>
+            {!pointageForce ? (
+              <p className="rounded-2xl bg-paper px-4 py-3 text-sm text-muted">
+                {jourSalonAujourdHui ? (
+                  <>
+                    Aujourd’hui ({libelleJourSalon(jourSalonAujourdHui)}) : le scan est{' '}
+                    <strong className="font-medium text-ink">automatique</strong>. Aucune date à choisir ici.
+                  </>
+                ) : (
+                  <>
+                    Les jours du salon ({joursSalon.map((j) => libelleJourSalon(j)).join(', ')}) : le scan s’ouvre
+                    automatiquement à Dakar. Aucune date à choisir en mode automatique.
+                  </>
+                )}
+              </p>
+            ) : jourSalonAujourdHui ? (
+              <div className="space-y-3 rounded-2xl border border-green/30 bg-green/5 px-4 py-3">
+                <p className="text-sm text-ink">
+                  Aujourd’hui ({libelleJourSalon(jourSalonAujourdHui)}) : le scan reste{' '}
+                  <strong className="font-semibold">automatique</strong>, même avec « Forcer un jour » enregistré.
+                </p>
+                <p className="text-sm text-muted">
+                  Le jour forcé ci-dessous ne s’utilise qu’<strong className="font-medium text-ink">avant ou après</strong>{' '}
+                  les dates du salon.
+                </p>
+                <details className="text-sm">
+                  <summary className="cursor-pointer font-medium text-ink">
+                    Jour forcé hors salon : {libelleJourSalon(jourPointage || (joursSalon[0] ?? ''))}
+                  </summary>
+                  <div className="mt-3 flex flex-wrap gap-2" role="radiogroup" aria-label="Jour de pointage hors salon">
+                    {joursSalon.map((jour) => (
+                      <label
+                        key={jour}
+                        className="flex cursor-pointer items-center gap-2 rounded-full border border-line bg-white px-4 py-2.5 text-sm font-medium has-[:checked]:border-red has-[:checked]:bg-red/5"
+                      >
+                        <input
+                          type="radio"
+                          name="jour-pointage"
+                          value={jour}
+                          checked={jourPointage === jour}
+                          onChange={() => setJourPointage(jour)}
+                          className="size-4 shrink-0 accent-red"
+                        />
+                        {libelleJourSalon(jour)}
+                      </label>
+                    ))}
+                  </div>
+                </details>
+              </div>
+            ) : (
+              <div>
+                <p className="mb-2 text-sm font-medium">Jour forcé (hors dates du salon)</p>
+                <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Jour de pointage hors salon">
+                  {joursSalon.map((jour) => (
+                    <label
+                      key={jour}
+                      className="flex cursor-pointer items-center gap-2 rounded-full border border-line px-4 py-2.5 text-sm font-medium has-[:checked]:border-red has-[:checked]:bg-red/5"
+                    >
+                      <input
+                        type="radio"
+                        name="jour-pointage"
+                        value={jour}
+                        checked={jourPointage === jour}
+                        onChange={() => setJourPointage(jour)}
+                        className="size-4 shrink-0 accent-red"
+                      />
                       {libelleJourSalon(jour)}
-                    </option>
+                    </label>
                   ))}
-                </select>
-              </label>
+                </div>
+              </div>
             )}
             <button
               type="submit"

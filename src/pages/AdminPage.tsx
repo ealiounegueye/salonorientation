@@ -284,25 +284,28 @@ export function AdminPage() {
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-3 py-4 sm:px-6 sm:py-6">
         <section className="rounded-2xl border border-line bg-white p-4">
           <div className="mb-3 rounded-2xl border border-line bg-paper/80 px-4 py-3">
-            <p className="text-sm font-medium text-ink">Jour de pointage</p>
+            <p className="text-sm font-medium text-ink">
+              {jourSalonAujourdHui ? 'Scan du jour (automatique)' : jourPointage ? 'Scan (jour forcé)' : 'Scan'}
+            </p>
             {jourPointage ? (
               <p className="mt-1 text-lg font-semibold text-red">
                 {libelleJourSalon(jourPointage)}
                 {jourSalonAujourdHui ? (
-                  <span className="ml-2 text-sm font-normal text-muted">(jour du salon · automatique Dakar)</span>
+                  <span className="ml-2 text-sm font-normal text-muted">— date Dakar, pas un choix manuel</span>
                 ) : (
-                  <span className="ml-2 text-sm font-normal text-muted">(forcé · hors dates salon)</span>
+                  <span className="ml-2 text-sm font-normal text-muted">— réglage hors dates salon</span>
                 )}
               </p>
             ) : (
               <p className="mt-1 text-sm font-medium text-red">
-                Aujourd’hui n’est pas un jour du salon — scan indisponible (heure Dakar).
+                Scan fermé : hors des jours du salon (heure Dakar). Forçage possible dans Réglages.
               </p>
             )}
-            <p className="mt-1 text-xs text-muted">
-              Les jours du salon, le pointage suit toujours la date à Dakar. Le forçage dans Réglages ne sert qu’en
-              dehors de ces dates (test, rattrapage).
-            </p>
+            {jourSalonAujourdHui && (
+              <p className="mt-1 text-xs text-muted">
+                Mode automatique : chaque scan compte pour la date du jour à Dakar (jours du salon).
+              </p>
+            )}
           </div>
           <button
             type="button"
