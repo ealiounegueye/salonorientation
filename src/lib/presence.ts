@@ -13,14 +13,27 @@ export function jourSalonDakar(joursSalon: readonly string[]): string | null {
   return joursSalon.includes(jour) ? jour : null
 }
 
-/** Jour enregistré au scan : calendrier Dakar, sauf override admin explicite. */
+/** Jour enregistré au scan : d’abord le calendrier Dakar (18–20…), sinon jour forcé (hors dates salon). */
 export function jourPointageScan(
   joursSalon: readonly string[],
-  overrideAdmin: string | null | undefined,
+  overrideHorsSalon: string | null | undefined,
 ): string | null {
-  const manuel = overrideAdmin?.trim()
+  const auto = jourSalonDakar(joursSalon)
+  if (auto) return auto
+  const manuel = overrideHorsSalon?.trim()
   if (manuel && joursSalon.includes(manuel)) return manuel
-  return jourSalonDakar(joursSalon)
+  return null
+}
+
+export function overridePointageDepuisReglages(
+  pointageForce: boolean,
+  jourPointage: string | null | undefined,
+  joursSalon: readonly string[],
+): string | null {
+  if (!pointageForce) return null
+  const jour = jourPointage?.trim()
+  if (jour && joursSalon.includes(jour)) return jour
+  return null
 }
 
 export function normaliserJoursPresents(valeur: string[] | null | undefined): string[] {

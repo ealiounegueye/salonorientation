@@ -46,6 +46,13 @@ alter table public.campagne add column if not exists lieu text not null default 
 alter table public.campagne add column if not exists horaires text not null default '9h–17h';
 alter table public.campagne add column if not exists periode text not null default 'novembre 2026';
 alter table public.campagne add column if not exists jours text not null default '18,19,20';
+alter table public.campagne add column if not exists pointage_force boolean not null default false;
+alter table public.campagne add column if not exists jour_pointage text;
+
+alter table public.campagne drop constraint if exists campagne_jour_pointage_check;
+alter table public.campagne
+  add constraint campagne_jour_pointage_check
+  check (jour_pointage is null or jour_pointage ~ '^[0-9]+$');
 
 create unique index if not exists participants_email_lower_idx
   on public.participants (lower(email))
@@ -195,7 +202,9 @@ as $$
     'lieu', lieu,
     'horaires', horaires,
     'periode', periode,
-    'jours', jours
+    'jours', jours,
+    'pointage_force', coalesce(pointage_force, false),
+    'jour_pointage', jour_pointage
   )
   from public.campagne
   where id = 1;

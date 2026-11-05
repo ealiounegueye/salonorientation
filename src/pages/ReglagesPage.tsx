@@ -4,6 +4,7 @@ import { BoiteConfirmation } from '../components/BoiteConfirmation'
 import { useAuth } from '../context/AuthContext'
 import { gererEquipe } from '../lib/api'
 import { lireParametres, normaliserJours } from '../lib/parametres'
+import { libelleJourSalon } from '../lib/presence'
 import { supabase } from '../lib/supabase'
 import type { Profile, Role } from '../types'
 import { libelleRole } from '../lib/permissions'
@@ -18,6 +19,8 @@ export function ReglagesPage() {
   const [horaires, setHoraires] = useState('')
   const [periode, setPeriode] = useState('')
   const [joursTexte, setJoursTexte] = useState('')
+  const [pointageForce, setPointageForce] = useState(false)
+  const [jourPointage, setJourPointage] = useState('')
   const [equipe, setEquipe] = useState<Profile[]>([])
   const [nom, setNom] = useState('')
   const [email, setEmail] = useState('')
@@ -30,6 +33,7 @@ export function ReglagesPage() {
   const [editRole, setEditRole] = useState<Role>('admin')
   const [resetId, setResetId] = useState<string | null>(null)
   const [resetMdp, setResetMdp] = useState('')
+  const [ajoutCompte, setAjoutCompte] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [messageOk, setMessageOk] = useState(true)
   const [envoi, setEnvoi] = useState(false)
@@ -37,7 +41,11 @@ export function ReglagesPage() {
 
   const charger = useCallback(async () => {
     const [campagneRes, equipeRes] = await Promise.all([
-      supabase.from('campagne').select('ouverte, lieu, horaires, periode, jours').eq('id', 1).maybeSingle(),
+      supabase
+        .from('campagne')
+        .select('ouverte, lieu, horaires, periode, jours, pointage_force, jour_pointage')
+        .eq('id', 1)
+        .maybeSingle(),
       supabase.from('profiles').select('*').order('created_at', { ascending: true }),
     ])
     if (campagneRes.data) {
@@ -46,7 +54,12 @@ export function ReglagesPage() {
       setLieu(String(salon.lieu ?? ''))
       setHoraires(String(salon.horaires ?? ''))
       setPeriode(String(salon.periode ?? ''))
-      setJoursTexte(normaliserJours(String(salon.jours ?? '')).join(', '))
+      const jours = normaliserJours(String(salon.jours ?? ''))
+      setJoursTexte(jours.join(', '))
+      const force = Boolean(salon.pointage_force)
+      const jour = String(salon.jour_pointage ?? '').trim()
+      setPointageForce(force)
+      setJourPointage(force && jour && jours.includes(jour) ? jour : jours[0] ?? '')
     }
     setEquipe((equipeRes.data ?? []) as Profile[])
   }, [])
@@ -104,7 +117,44 @@ export function ReglagesPage() {
     }
     setJoursTexte(jours.join(', '))
     await lireParametres(true)
+    if (pointageForce && jourPointage && !jours.includes(jourPointage)) {
+      setJourPointage(jours[0] ?? '')
+    }
     signaler(true, 'Le formulaire utilise ces dates.')
+  }
+
+  async function enregistrerPointage(event: FormEvent) {
+    event.preventDefault()
+    const jours = normaliserJours(joursTexte)
+    if (jours.length === 0) {
+      signaler(false, 'Indiquez d’abord les jours du salon.')
+      return
+    }
+    const jour = pointageForce ? jourPointage.trim() : ''
+    if (pointageForce && (!jour || !jours.includes(jour))) {
+      signaler(false, 'Choisissez un jour de pointage valide.')
+      return
+    }
+    setEnvoi(true)
+    const { error } = await supabase
+      .from('campagne')
+      .update({
+        pointage_force: pointageForce,
+        jour_pointage: pointageForce ? jour : null,
+      })
+      .eq('id', 1)
+    setEnvoi(false)
+    if (error) {
+      signaler(false, 'Le réglage de pointage n’a pas été enregistré.')
+      return
+    }
+    await lireParametres(true)
+    signaler(
+      true,
+      pointageForce
+        ? `Hors dates du salon, pointage sur ${libelleJourSalon(jour)} (pendant le salon : automatique Dakar).`
+        : 'Pointage uniquement les jours du salon (date Dakar).',
+    )
   }
 
   async function creerCompte(event: FormEvent) {
@@ -124,10 +174,12 @@ export function ReglagesPage() {
     setNom('')
     setEmail('')
     setPassword('')
+    setAjoutCompte(false)
     void charger()
   }
 
   function ouvrirEdition(membre: Profile) {
+    setAjoutCompte(false)
     setResetId(null)
     setEdition(membre.id)
     setEditNom(membre.nom)
@@ -221,6 +273,73 @@ export function ReglagesPage() {
         </section>
 
         <section className="rounded-2xl border border-line bg-white p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Pointage scan</p>
+          <p className="mt-2 text-sm text-muted">
+            Pendant les <strong className="font-medium text-ink">jours du salon</strong> (dates configurées ci-dessous, ex.
+            18–20 nov.), le pointage est <strong className="font-medium text-ink">toujours automatique</strong> à Dakar.
+            Le forçage ne s’applique qu’<strong className="font-medium text-ink">en dehors</strong> de ces dates (test,
+            rattrapage), sur tous les postes.
+          </p>
+          <form onSubmit={(event) => void enregistrerPointage(event)} className="mt-4 space-y-3">
+            <fieldset className="space-y-2">
+              <legend className="sr-only">Mode de pointage</legend>
+              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-line px-4 py-3 has-[:checked]:border-red has-[:checked]:bg-red/5">
+                <input
+                  type="radio"
+                  name="mode-pointage"
+                  checked={!pointageForce}
+                  onChange={() => setPointageForce(false)}
+                  className="mt-0.5 size-4 accent-red"
+                />
+                <span>
+                  <span className="block text-sm font-semibold">Automatique</span>
+                  <span className="block text-sm text-muted">Jour du salon selon la date et l’heure à Dakar.</span>
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-line px-4 py-3 has-[:checked]:border-red has-[:checked]:bg-red/5">
+                <input
+                  type="radio"
+                  name="mode-pointage"
+                  checked={pointageForce}
+                  onChange={() => setPointageForce(true)}
+                  className="mt-0.5 size-4 accent-red"
+                />
+                <span>
+                  <span className="block text-sm font-semibold">Forcer un jour</span>
+                  <span className="block text-sm text-muted">
+                    Hors jours du salon uniquement : les scans comptent pour le jour choisi.
+                  </span>
+                </span>
+              </label>
+            </fieldset>
+            {pointageForce && (
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium">Jour de pointage</span>
+                <select
+                  value={jourPointage}
+                  onChange={(event) => setJourPointage(event.target.value)}
+                  className={champ}
+                  required
+                >
+                  {normaliserJours(joursTexte).map((jour) => (
+                    <option key={jour} value={jour}>
+                      {libelleJourSalon(jour)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <button
+              type="submit"
+              disabled={envoi}
+              className="rounded-full bg-red px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-dark disabled:opacity-60"
+            >
+              Enregistrer le pointage
+            </button>
+          </form>
+        </section>
+
+        <section className="rounded-2xl border border-line bg-white p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Salon</p>
           <p className="mt-2 text-sm text-muted">
             Ces informations s’affichent sous le QR code et déterminent les dates du formulaire.
@@ -284,6 +403,7 @@ export function ReglagesPage() {
                     <button
                       type="button"
                       onClick={() => {
+                        setAjoutCompte(false)
                         setEdition(null)
                         setResetMdp('')
                         setResetId(resetId === membre.id ? null : membre.id)
@@ -361,48 +481,85 @@ export function ReglagesPage() {
             ))}
           </ul>
 
-          <form onSubmit={(event) => void creerCompte(event)} className="mt-4 space-y-3 border-t border-line pt-4">
-            <p className="text-sm font-semibold">Ajouter un compte</p>
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium">Nom</span>
-              <input required value={nom} onChange={(event) => setNom(event.target.value)} className={champ} />
-            </label>
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium">E-mail</span>
-              <input required type="email" autoComplete="off" value={email} onChange={(event) => setEmail(event.target.value)} className={champ} />
-            </label>
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium">Mot de passe</span>
-              <input
-                required
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className={champ}
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium">Rôle</span>
-              <select
-                value={roleNouveau}
-                onChange={(event) => setRoleNouveau(event.target.value as Role)}
-                className={champ}
+          <div className="mt-4 border-t border-line pt-4">
+            {!ajoutCompte ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setEdition(null)
+                  setResetId(null)
+                  setAjoutCompte(true)
+                }}
+                className="rounded-full bg-red px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-dark"
               >
-                <option value="hotesse">Hôtesse</option>
-                <option value="admin">Admin</option>
-                <option value="super_admin">Super admin</option>
-              </select>
-            </label>
-            <button
-              type="submit"
-              disabled={envoi}
-              className="rounded-full bg-red px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-dark disabled:opacity-60"
-            >
-              {envoi ? 'Création…' : 'Ajouter'}
-            </button>
-          </form>
+                Ajouter un compte
+              </button>
+            ) : (
+              <form onSubmit={(event) => void creerCompte(event)} className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold">Nouveau compte</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAjoutCompte(false)
+                      setNom('')
+                      setEmail('')
+                      setPassword('')
+                    }}
+                    className="rounded-full border border-line px-3 py-1.5 text-sm font-medium hover:border-red/40"
+                  >
+                    Annuler
+                  </button>
+                </div>
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium">Nom</span>
+                  <input required value={nom} onChange={(event) => setNom(event.target.value)} className={champ} />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium">E-mail</span>
+                  <input
+                    required
+                    type="email"
+                    autoComplete="off"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    className={champ}
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium">Mot de passe</span>
+                  <input
+                    required
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={8}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    className={champ}
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium">Rôle</span>
+                  <select
+                    value={roleNouveau}
+                    onChange={(event) => setRoleNouveau(event.target.value as Role)}
+                    className={champ}
+                  >
+                    <option value="hotesse">Hôtesse</option>
+                    <option value="admin">Admin</option>
+                    <option value="super_admin">Super admin</option>
+                  </select>
+                </label>
+                <button
+                  type="submit"
+                  disabled={envoi}
+                  className="rounded-full bg-red px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-dark disabled:opacity-60"
+                >
+                  {envoi ? 'Création…' : 'Créer le compte'}
+                </button>
+              </form>
+            )}
+          </div>
         </section>
 
         <section className="rounded-2xl border border-line bg-white p-5">

@@ -8,6 +8,9 @@ export type ParametresSalon = {
   periode: string
   jours: string[]
   ouverte: boolean
+  /** Si true, tous les postes scannent pour `jourPointage`. */
+  pointageForce: boolean
+  jourPointage: string | null
 }
 
 export const parametresDefaut: ParametresSalon = {
@@ -16,6 +19,8 @@ export const parametresDefaut: ParametresSalon = {
   periode: 'novembre 2026',
   jours: [...JOURS],
   ouverte: true,
+  pointageForce: false,
+  jourPointage: null,
 }
 
 let cache: ParametresSalon | null = null
@@ -43,12 +48,21 @@ export async function lireParametres(forcer = false) {
   if (error || !data || typeof data !== 'object') return cache ?? parametresDefaut
   const brut = data as Record<string, unknown>
   const jours = normaliserJours(String(brut.jours ?? ''))
+  const joursListe = jours.length ? jours : parametresDefaut.jours
+  const pointageForce = Boolean(brut.pointage_force)
+  const jourBrut = String(brut.jour_pointage ?? '').trim()
+  const jourPointage =
+    pointageForce && jourBrut && joursListe.includes(String(Number.parseInt(jourBrut, 10)))
+      ? String(Number.parseInt(jourBrut, 10))
+      : null
   cache = {
     lieu: String(brut.lieu || parametresDefaut.lieu),
     horaires: String(brut.horaires || parametresDefaut.horaires),
     periode: String(brut.periode || parametresDefaut.periode),
-    jours: jours.length ? jours : parametresDefaut.jours,
+    jours: joursListe,
     ouverte: Boolean(brut.ouverte),
+    pointageForce: pointageForce && Boolean(jourPointage),
+    jourPointage,
   }
   return cache
 }

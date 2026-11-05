@@ -6,12 +6,7 @@ import { AppHeader } from '../components/AppHeader'
 import { BoiteConfirmation } from '../components/BoiteConfirmation'
 import { ScanPresence } from '../components/ScanPresence'
 import { useAuth } from '../context/AuthContext'
-import {
-  estBackoffice,
-  peutAjouterParticipant,
-  peutExporterParticipants,
-  peutSupprimerParticipant,
-} from '../lib/permissions'
+import { peutAjouterParticipant, peutExporterParticipants, peutSupprimerParticipant } from '../lib/permissions'
 import { chargerParticipants, exporterExcel, exporterPdf } from '../lib/export'
 import { calculerStats } from '../lib/stats'
 import {
@@ -32,6 +27,8 @@ import {
   joursPresentsApresScan,
   libelleJourSalon,
   normaliserJoursPresents,
+  jourSalonDakar,
+  overridePointageDepuisReglages,
 } from '../lib/presence'
 import { lireParametres } from '../lib/parametres'
 import { supabase } from '../lib/supabase'
@@ -68,15 +65,14 @@ export function AdminPage() {
   const peutSupprimer = peutSupprimerParticipant(profile?.role)
   const peutExporter = peutExporterParticipants(profile?.role)
   const peutAjouter = peutAjouterParticipant(profile?.role)
-  const peutForcerJourPointage = estBackoffice(profile?.role)
   const [lignes, setLignes] = useState<Participant[]>([])
   const [total, setTotal] = useState(0)
   const [recherche, setRecherche] = useState('')
   const [saisie, setSaisie] = useState('')
   const [filtre, setFiltre] = useState<FiltreListe>('tous')
   const [joursDispo, setJoursDispo] = useState<string[]>([...JOURS])
-  const [correctionJour, setCorrectionJour] = useState(false)
-  const [jourScanManuel, setJourScanManuel] = useState('')
+  const [pointageForce, setPointageForce] = useState(false)
+  const [jourPointageGlobal, setJourPointageGlobal] = useState<string | null>(null)
   const [horloge, setHorloge] = useState(() => Date.now())
   const [jour, setJour] = useState('toutes')
   const [profil, setProfil] = useState('tous')
@@ -95,13 +91,20 @@ export function AdminPage() {
   const flashTimer = useRef<number | null>(null)
   const [aSupprimer, setASupprimer] = useState<Participant | null>(null)
 
+  const appliquerParametresSalon = useCallback((salon: Awaited<ReturnType<typeof lireParametres>>) => {
+    setJoursDispo(salon.jours)
+    setPointageForce(salon.pointageForce)
+    setJourPointageGlobal(salon.jourPointage)
+  }, [])
+
   useEffect(() => {
     if (!configured) return
-    void lireParametres(true).then((salon) => {
-      setJoursDispo(salon.jours)
-      setJourScanManuel(salon.jours[0] ?? '')
-    })
-  }, [configured])
+    void lireParametres(true).then(appliquerParametresSalon)
+    const sync = window.setInterval(() => {
+      void lireParametres(true).then(appliquerParametresSalon)
+    }, 30_000)
+    return () => window.clearInterval(sync)
+  }, [appliquerParametresSalon, configured])
 
   useEffect(() => {
     const id = window.setInterval(() => setHorloge(Date.now()), 60_000)
@@ -110,9 +113,14 @@ export function AdminPage() {
 
   const jourPointage = useMemo(() => {
     void horloge
-    const override = correctionJour && peutForcerJourPointage ? jourScanManuel : null
+    const override = overridePointageDepuisReglages(pointageForce, jourPointageGlobal, joursDispo)
     return jourPointageScan(joursDispo, override)
-  }, [correctionJour, horloge, jourScanManuel, joursDispo, peutForcerJourPointage])
+  }, [horloge, jourPointageGlobal, joursDispo, pointageForce])
+
+  const jourSalonAujourdHui = useMemo(() => {
+    void horloge
+    return jourSalonDakar(joursDispo)
+  }, [horloge, joursDispo])
 
   const charger = useCallback(async () => {
     const ticket = ++requeteListe.current
@@ -195,9 +203,15 @@ export function AdminPage() {
       signaler(false, `${nomComplet(participant)} — inscription annulée.`)
       return
     }
-    const jourCourant = jourPointageScan(joursDispo, correctionJour && peutForcerJourPointage ? jourScanManuel : null)
+    const jourCourant = jourPointageScan(
+      joursDispo,
+      overridePointageDepuisReglages(pointageForce, jourPointageGlobal, joursDispo),
+    )
     if (!jourCourant) {
-      signaler(false, 'Pointage impossible : aujourd’hui n’est pas un jour du salon (heure Dakar).')
+      signaler(
+        false,
+        'Pointage impossible : hors des jours du salon (Dakar). Activez un jour forcé dans Réglages si besoin.',
+      )
       recents.current.delete(valeur)
       return
     }
@@ -274,10 +288,10 @@ export function AdminPage() {
             {jourPointage ? (
               <p className="mt-1 text-lg font-semibold text-red">
                 {libelleJourSalon(jourPointage)}
-                {!correctionJour || !peutForcerJourPointage ? (
-                  <span className="ml-2 text-sm font-normal text-muted">(automatique · Dakar)</span>
+                {jourSalonAujourdHui ? (
+                  <span className="ml-2 text-sm font-normal text-muted">(jour du salon · automatique Dakar)</span>
                 ) : (
-                  <span className="ml-2 text-sm font-normal text-muted">(correction admin)</span>
+                  <span className="ml-2 text-sm font-normal text-muted">(forcé · hors dates salon)</span>
                 )}
               </p>
             ) : (
@@ -285,33 +299,10 @@ export function AdminPage() {
                 Aujourd’hui n’est pas un jour du salon — scan indisponible (heure Dakar).
               </p>
             )}
-            <p className="mt-1 text-xs text-muted">Chaque scan enregistre la présence pour ce jour uniquement.</p>
-            {peutForcerJourPointage && (
-              <div className="mt-3 border-t border-line pt-3">
-                <label className="flex cursor-pointer items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={correctionJour}
-                    onChange={(event) => setCorrectionJour(event.target.checked)}
-                    className="size-4 accent-red"
-                  />
-                  Forcer un autre jour (admin)
-                </label>
-                {correctionJour && (
-                  <select
-                    value={jourScanManuel}
-                    onChange={(event) => setJourScanManuel(event.target.value)}
-                    className="mt-2 w-full rounded-2xl border border-line bg-white px-4 py-2.5 text-sm font-medium outline-none ring-red/20 focus:ring-4 sm:max-w-xs"
-                  >
-                    {joursDispo.map((item) => (
-                      <option key={item} value={item}>
-                        {libelleJourSalon(item)}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-            )}
+            <p className="mt-1 text-xs text-muted">
+              Les jours du salon, le pointage suit toujours la date à Dakar. Le forçage dans Réglages ne sert qu’en
+              dehors de ces dates (test, rattrapage).
+            </p>
           </div>
           <button
             type="button"
