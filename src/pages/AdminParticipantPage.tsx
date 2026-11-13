@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { AppHeader } from '../components/AppHeader'
 import { BoiteConfirmation } from '../components/BoiteConfirmation'
 import { InfosLieu } from '../components/InfosLieu'
@@ -17,12 +17,20 @@ import {
 } from '../lib/format'
 import { jourSalonDakar, joursPresentsApresScan, normaliserJoursPresents } from '../lib/presence'
 import { lireParametres } from '../lib/parametres'
+import { lireEtatListeParticipants, participantsListeSearch } from '../lib/participantsListe'
 import { supabase } from '../lib/supabase'
 import type { Participant, StatutParticipant } from '../types'
 
 export function AdminParticipantPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const listeSearch = (() => {
+    const depuisNavigation = (location.state as { listeSearch?: string } | null)?.listeSearch?.trim()
+    if (depuisNavigation) return depuisNavigation
+    const session = lireEtatListeParticipants()
+    return session ? participantsListeSearch(session) : ''
+  })()
   const { profile } = useAuth()
   const peutSupprimer = peutSupprimerParticipant(profile?.role)
   const peutGerer = peutGererFicheParticipant(profile?.role)
@@ -83,7 +91,7 @@ export function AdminParticipantPage() {
       setSuppression(false)
       return
     }
-    navigate('/admin/participants', { replace: true })
+    navigate(`/admin/participants${listeSearch}`, { replace: true })
   }
 
   async function renvoyer() {
@@ -102,7 +110,7 @@ export function AdminParticipantPage() {
     <div>
       <AppHeader subtitle="Badge" />
       <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
-        <Link to="/admin/participants" className="text-sm font-medium text-red">
+        <Link to={`/admin/participants${listeSearch}`} className="text-sm font-medium text-red">
           Retour aux participants
         </Link>
 

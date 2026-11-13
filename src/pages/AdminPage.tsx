@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { CalendarDays, FileSpreadsheet, FileText, ScanLine, Search, Trash2, UserPlus, Users } from 'lucide-react'
 import { AjoutParticipant } from '../components/AjoutParticipant'
 import { AppHeader } from '../components/AppHeader'
@@ -31,6 +31,12 @@ import {
   overridePointageDepuisReglages,
 } from '../lib/presence'
 import { lireParametres } from '../lib/parametres'
+import {
+  etatDepartListeParticipants,
+  parseParticipantsListeSearch,
+  participantsListeSearch,
+  sauverEtatListeParticipants,
+} from '../lib/participantsListe'
 import { supabase } from '../lib/supabase'
 import type { Participant, StatutParticipant } from '../types'
 
@@ -61,24 +67,26 @@ const PROFIL_FILTRE_COURT: Record<string, string> = {
 }
 
 export function AdminPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const etatDepart = etatDepartListeParticipants(searchParams.toString())
   const { configured, profile } = useAuth()
   const peutSupprimer = peutSupprimerParticipant(profile?.role)
   const peutExporter = peutExporterParticipants(profile?.role)
   const peutAjouter = peutAjouterParticipant(profile?.role)
   const [lignes, setLignes] = useState<Participant[]>([])
   const [total, setTotal] = useState(0)
-  const [recherche, setRecherche] = useState('')
-  const [saisie, setSaisie] = useState('')
-  const [filtre, setFiltre] = useState<FiltreListe>('tous')
+  const [recherche, setRecherche] = useState(etatDepart.recherche)
+  const [saisie, setSaisie] = useState(etatDepart.recherche)
+  const [filtre, setFiltre] = useState<FiltreListe>(etatDepart.filtre as FiltreListe)
   const [joursDispo, setJoursDispo] = useState<string[]>([...JOURS])
   const [pointageForce, setPointageForce] = useState(false)
   const [jourPointageGlobal, setJourPointageGlobal] = useState<string | null>(null)
   const [horloge, setHorloge] = useState(() => Date.now())
-  const [jour, setJour] = useState('toutes')
-  const [profil, setProfil] = useState('tous')
+  const [jour, setJour] = useState(etatDepart.jour)
+  const [profil, setProfil] = useState(etatDepart.profil)
   const [listeEnCours, setListeEnCours] = useState(false)
   const [ajout, setAjout] = useState(false)
-  const [page, setPage] = useState(0)
+  const [page, setPage] = useState(etatDepart.page)
   const [code, setCode] = useState('')
   const [flash, setFlash] = useState<string | null>(null)
   const [flashOk, setFlashOk] = useState(true)
@@ -148,12 +156,31 @@ export function AdminPage() {
   }, [charger, configured])
 
   useEffect(() => {
+    const prochain = participantsListeSearch({ page, filtre, jour, profil, recherche })
+    const actuel = participantsListeSearch(parseParticipantsListeSearch(searchParams.toString()))
+    if (prochain !== actuel) {
+      const params = new URLSearchParams(prochain.startsWith('?') ? prochain.slice(1) : prochain)
+      setSearchParams(params, { replace: true })
+    }
+  }, [page, filtre, jour, profil, recherche, searchParams, setSearchParams])
+
+  const listeSearch = useMemo(
+    () => participantsListeSearch({ page, filtre, jour, profil, recherche }),
+    [page, filtre, jour, profil, recherche],
+  )
+
+  useEffect(() => {
+    sauverEtatListeParticipants({ page, filtre, jour, profil, recherche })
+  }, [page, filtre, jour, profil, recherche])
+
+  useEffect(() => {
     const timer = window.setTimeout(() => {
+      if (saisie === recherche) return
       setPage(0)
       setRecherche(saisie)
     }, 250)
     return () => window.clearTimeout(timer)
-  }, [saisie])
+  }, [saisie, recherche])
 
   function preparerSon() {
     son.current ??= new AudioContext()
@@ -525,6 +552,7 @@ export function AdminPage() {
                     <td className="px-1 py-2 align-top sm:px-4 sm:py-3">
                       <Link
                         to={`/admin/participants/${ligne.id}`}
+                        state={{ listeSearch }}
                         className="block break-all font-mono text-[10px] leading-tight font-semibold text-red sm:text-xs"
                         title={ligne.code}
                       >
@@ -532,7 +560,7 @@ export function AdminPage() {
                       </Link>
                     </td>
                     <td className="px-1.5 py-2 align-top sm:px-4 sm:py-3">
-                      <Link to={`/admin/participants/${ligne.id}`} className="block min-w-0">
+                      <Link to={`/admin/participants/${ligne.id}`} state={{ listeSearch }} className="block min-w-0">
                         <p className="truncate font-medium leading-snug" title={nomComplet(ligne)}>
                           {nomComplet(ligne)}
                         </p>
