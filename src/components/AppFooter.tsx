@@ -27,9 +27,9 @@ export function AppFooter() {
           type="button"
           onClick={toucher}
           aria-label="Accès"
-          className="grid size-6 shrink-0 place-items-center"
+          className="grid size-8 shrink-0 place-items-center"
         >
-          <span className="size-1.5 rounded-full bg-black" />
+          <span className="size-4 rounded-full bg-black" />
         </button>
       </span>
       {pathname === '/admin/connexion' ? (
