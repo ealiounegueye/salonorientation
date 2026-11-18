@@ -52,3 +52,39 @@ export function joursPourStatsPresence(participant: { statut: string; jours_pres
   if (participant.statut !== 'present') return []
   return normaliserJoursPresents(participant.jours_presents)
 }
+
+export function joursInscriptionParticipant(participant: { dates?: string | null }) {
+  if (!participant.dates) return []
+  return participant.dates
+    .split(',')
+    .map((d) => d.trim())
+    .filter(Boolean)
+}
+
+/** Présence physique : badge scanné ou inscription faite sur place au salon. */
+export function compteDansTotalPresents(participant: { statut: string; sur_place?: boolean }) {
+  return participant.statut === 'present' || Boolean(participant.sur_place)
+}
+
+/** Présent **scanné** un jour donné (badge passé au scan ce jour-là). */
+export function presentScannePourJourSalon(
+  participant: { statut: string; jours_presents?: string[] | null },
+  jour: string,
+) {
+  if (participant.statut !== 'present') return false
+  return joursPourStatsPresence(participant).includes(jour)
+}
+
+export type FiltreJourListe = 'tous' | 'inscrit' | 'present' | 'annule' | 'sur_place'
+
+/** Inscrits / sur place → jour coché à l’inscription ; Présents → jour du scan. */
+export function appliquerFiltreJourListe<Q extends { contains: (col: string, val: string[]) => Q; or: (expr: string) => Q }>(
+  requete: Q,
+  jour: string,
+  filtre: FiltreJourListe,
+): Q {
+  if (jour === 'toutes') return requete
+  if (filtre === 'present') return requete.contains('jours_presents', [jour])
+  if (filtre === 'inscrit' || filtre === 'sur_place') return requete.contains('jours_sel', [jour])
+  return requete.or(`jours_sel.cs.{${jour}},jours_presents.cs.{${jour}}`)
+}

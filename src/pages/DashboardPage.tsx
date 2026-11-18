@@ -255,7 +255,12 @@ export function DashboardPage() {
           <>
             <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <CarteKpi titre="Inscriptions actives" valeur={stats.actifs} detail={`${stats.total} au total (historique)`} />
-              <CarteKpi titre="Présents" valeur={stats.presents} accent />
+              <CarteKpi
+                titre="Présents"
+                valeur={stats.presents}
+                detail="Scannés + inscrits sur place"
+                accent
+              />
               <CarteKpi titre="Taux de présence" valeur={`${stats.tauxPresence}%`} detail={`${stats.inscrits} encore inscrits`} />
               <CarteKpi
                 titre="Aujourd’hui"

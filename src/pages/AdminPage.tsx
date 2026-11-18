@@ -27,6 +27,7 @@ import {
   joursPresentsApresScan,
   libelleJourSalon,
   normaliserJoursPresents,
+  appliquerFiltreJourListe,
   jourSalonDakar,
   overridePointageDepuisReglages,
 } from '../lib/presence'
@@ -141,7 +142,7 @@ export function AdminPage() {
     if (filtre === 'sur_place') liste = liste.eq('sur_place', true)
     else if (filtre !== 'tous') liste = liste.eq('statut', filtre)
     if (profil !== 'tous') liste = liste.eq('profil', profil)
-    if (jour !== 'toutes') liste = liste.contains('jours_sel', [jour])
+    liste = appliquerFiltreJourListe(liste, jour, filtre)
     if (filtreTexte) liste = liste.or(filtreTexte)
 
     const { data, count } = await liste.range(page * PAGE, page * PAGE + PAGE - 1)
@@ -490,6 +491,30 @@ export function AdminPage() {
                 </button>
               ))}
             </div>
+            {jour !== 'toutes' && (filtre === 'inscrit' || filtre === 'sur_place') && (
+              <p className="mt-2 text-xs text-muted">
+                Date <strong>{libelleJourSalon(jour)}</strong> : inscrits ayant <strong>coché ce jour</strong> au
+                formulaire (sans exiger un scan).
+              </p>
+            )}
+            {jour !== 'toutes' && filtre === 'present' && (
+              <p className="mt-2 text-xs text-muted">
+                Date <strong>{libelleJourSalon(jour)}</strong> : badges <strong>scannés</strong> ce jour uniquement
+                (« Jours présents »).
+              </p>
+            )}
+            {jour !== 'toutes' && filtre === 'tous' && (
+              <p className="mt-2 text-xs text-muted">
+                Date <strong>{libelleJourSalon(jour)}</strong> : inscrits pour ce jour <strong>ou</strong> scannés ce
+                jour.
+              </p>
+            )}
+            {filtre === 'present' && jour === 'toutes' && (
+              <p className="mt-2 text-xs text-muted">
+                Tous les participants au statut <strong>Présent</strong> (scan au moins une fois). Ajoutez une date pour
+                filtrer un jour précis.
+              </p>
+            )}
           </div>
           <div className="border-b border-line px-3 py-3 sm:px-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -628,7 +653,9 @@ export function AdminPage() {
 
           <div className="flex flex-col gap-3 border-t border-line px-3 py-3 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-4">
             <span className="text-center text-muted sm:text-left">
-              {total} inscription{total > 1 ? 's' : ''}
+              {filtre === 'present'
+                ? `${total} présent${total > 1 ? 's' : ''}${jour !== 'toutes' ? ` (jour ${jour})` : ''}`
+                : `${total} inscription${total > 1 ? 's' : ''}`}
             </span>
             <div className="flex items-center justify-center gap-2 sm:justify-end">
               <button

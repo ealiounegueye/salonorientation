@@ -12,6 +12,7 @@ import {
   libelleStatutParticipant,
 } from './format'
 import type { StatsSalon } from './stats'
+import { appliquerFiltreJourListe, type FiltreJourListe } from './presence'
 import { supabase } from './supabase'
 
 const ENTETES = [
@@ -68,7 +69,14 @@ export async function chargerParticipants(filtres?: FiltresExport): Promise<Part
     if (filtres?.surPlace) requete = requete.eq('sur_place', true)
     else if (filtres?.statut && filtres.statut !== 'tous') requete = requete.eq('statut', filtres.statut)
     if (filtres?.profil && filtres.profil !== 'tous') requete = requete.eq('profil', filtres.profil)
-    if (filtres?.jour && filtres.jour !== 'toutes') requete = requete.contains('jours_sel', [filtres.jour])
+    if (filtres?.jour) {
+      const filtreJour: FiltreJourListe = filtres.surPlace
+        ? 'sur_place'
+        : (filtres.statut ?? 'tous') === 'tous'
+          ? 'tous'
+          : (filtres.statut as FiltreJourListe)
+      requete = appliquerFiltreJourListe(requete, filtres.jour, filtreJour)
+    }
     if (filtreTexte) requete = requete.or(filtreTexte)
     const { data, error } = await requete.range(from, from + 999)
     if (error || !data?.length) break

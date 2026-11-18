@@ -1,6 +1,6 @@
 import type { Participant } from '../types'
 import { JOURS, PROFILS, SEXES } from './format'
-import { joursPourStatsPresence } from './presence'
+import { compteDansTotalPresents, joursInscriptionParticipant, presentScannePourJourSalon } from './presence'
 
 const dateurJour = new Intl.DateTimeFormat('fr-CA', {
   timeZone: 'Africa/Dakar',
@@ -77,9 +77,10 @@ export function calculerStats(
   const actifs = participants.filter((p) => p.statut !== 'annule')
   const pourGraphiques = participantsPourGraphiques(actifs, options)
   const inscrits = actifs.filter((p) => p.statut === 'inscrit').length
-  const presents = actifs.filter((p) => p.statut === 'present').length
+  const presents = actifs.filter(compteDansTotalPresents).length
   const annules = participants.filter((p) => p.statut === 'annule').length
-  const pointables = inscrits + presents
+  const inscritsEnAttente = actifs.filter((p) => p.statut === 'inscrit' && !p.sur_place).length
+  const pointables = inscritsEnAttente + presents
   const tauxPresence = pointables > 0 ? Math.round((presents / pointables) * 100) : 0
   const inscriptionsAujourdhui = actifs.filter((p) => estAujourdDhakar(p.created_at)).length
 
@@ -105,13 +106,10 @@ export function calculerStats(
   const parDate = jours.map((jour, index) => {
     let count = 0
     for (const p of actifs) {
-      if (p.statut === 'inscrit' && inclInscrits) {
-        const sel = p.dates?.split(',').map((d) => d.trim()) ?? []
-        if (sel.includes(jour)) count += 1
+      if (p.statut === 'inscrit' && inclInscrits && !p.sur_place) {
+        if (joursInscriptionParticipant(p).includes(jour)) count += 1
       }
-      if (p.statut === 'present' && inclPresents) {
-        if (joursPourStatsPresence(p).includes(jour)) count += 1
-      }
+      if (inclPresents && presentScannePourJourSalon(p, jour)) count += 1
     }
     selectionsDate += count
     return {
